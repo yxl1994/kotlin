@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.idea.caches.resolve
 
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.CachedValueProvider
@@ -20,6 +21,7 @@ import org.jetbrains.kotlin.idea.caches.trackers.KotlinCodeBlockModificationList
 import org.jetbrains.kotlin.psi.KtElement
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.resolve.CompositeBindingContext
+import org.jetbrains.kotlin.storage.CancellableLock
 import org.jetbrains.kotlin.utils.addToStdlib.firstNotNullResult
 
 internal class ProjectResolutionFacade(
@@ -45,6 +47,10 @@ internal class ProjectResolutionFacade(
 
     private val cachedResolverForProject: ResolverForProject<IdeaModuleInfo>
         get() = globalContext.storageManager.compute { cachedValue.value }
+
+    private val analysisResultsLock = CancellableLock {
+        ProgressManager.checkCanceled()
+    }
 
     private val analysisResults = CachedValuesManager.getManager(project).createCachedValue(
         {
@@ -117,7 +123,7 @@ internal class ProjectResolutionFacade(
 
     internal fun getAnalysisResultsForElements(elements: Collection<KtElement>): AnalysisResult {
         assert(elements.isNotEmpty()) { "elements collection should not be empty" }
-        val slruCache = synchronized(analysisResults) {
+        val slruCache = analysisResultsLock.guarded {
             analysisResults.value!!
         }
         val results = elements.map {
