@@ -16,8 +16,12 @@ import org.jetbrains.kotlin.ir.types.classOrNull
 import org.jetbrains.kotlin.ir.types.classifierOrFail
 import org.jetbrains.kotlin.ir.types.classifierOrNull
 import org.jetbrains.kotlin.ir.util.*
-import org.jetbrains.kotlin.ir.visitors.*
+import org.jetbrains.kotlin.ir.visitors.IrElementVisitorVoid
+import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
+import org.jetbrains.kotlin.ir.visitors.acceptVoid
 import java.util.*
+
+private val PRINT_REACHABILITY_INFO = java.lang.Boolean.getBoolean("kotlin.js.ir.dce.print.reachability.info")
 
 fun eliminateDeadDeclarations(
     module: IrModuleFragment,
@@ -95,43 +99,65 @@ private fun removeUselessDeclarations(module: IrModuleFragment, usefulDeclaratio
 }
 
 fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendContext): Set<IrDeclaration> {
+    val reachabilityInfo: MutableSet<String> = if (PRINT_REACHABILITY_INFO) linkedSetOf() else Collections.emptySet()
+
     val queue = ArrayDeque<IrDeclaration>()
     val result = hashSetOf<IrDeclaration>()
     val constructedClasses = hashSetOf<IrClass>()
 
-    fun IrDeclaration.enqueue() {
-        if ((this !is IrProperty || this.isExternal) && this !in result) {
-            result.add(this)
-            queue.addLast(this)
-        }
-    }
-
-    fun Iterable<IrDeclaration>.withNested(): Iterable<IrDeclaration> {
-        val result = mutableListOf<IrDeclaration>()
-
-        this.forEach {
-            it.acceptVoid(object : IrElementVisitorVoid {
-                override fun visitElement(element: IrElement) {
-                    element.acceptChildrenVoid(this)
-                }
-
-                override fun visitBody(body: IrBody) {
-                    // Skip
-                }
-
-                override fun visitDeclaration(declaration: IrDeclaration) {
-                    super.visitDeclaration(declaration)
-                    result += declaration
-                }
-            })
+    fun IrDeclaration.enqueue(
+        from: IrDeclaration?,
+        description: String?,
+        altFromFqn: String? = null
+    ) {
+        /// TODO check
+        if (this is IrProperty && !this.isExternal ||
+            this in result
+        ) {
+            return
         }
 
-        return result
+        if (PRINT_REACHABILITY_INFO) {
+            val fromFqn = (from as? IrDeclarationWithName)?.fqNameWhenAvailable?.asString() ?: altFromFqn ?: "<unknown>"
+
+            val toFqn = (this as? IrDeclarationWithName)?.fqNameWhenAvailable?.asString() ?: "<unknown>"
+
+            val v = "\"$fromFqn\" -> \"$toFqn\"" + (if (description.isNullOrBlank()) "" else " // $description")
+
+            reachabilityInfo.add(v)
+        }
+
+        result.add(this)
+        queue.addLast(this)
     }
 
-    // Add roots, including nested declarations
+    /// TODO
+    // Add roots
     stageController.withInitialIr {
-        roots.withNested().forEach { it.enqueue() }
+        roots.forEach {
+            it.enqueue(null, null, altFromFqn = "<ROOT>")
+        }
+
+        // Add roots' nested declarations
+        roots.forEach {
+            it.acceptVoid(
+                object : IrElementVisitorVoid {
+                    override fun visitElement(element: IrElement) {
+                        element.acceptChildrenVoid(this)
+                    }
+
+                    override fun visitBody(body: IrBody) {
+                        // Skip
+                    }
+
+                    override fun visitDeclaration(declaration: IrDeclaration) {
+                        if (declaration !== it) declaration.enqueue(it, "roots' nested declaration")
+
+                        super.visitDeclaration(declaration)
+                    }
+                }
+            )
+        }
     }
 
     val toStringMethod =
@@ -148,16 +174,20 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
             // TODO remove?
             stageController.lazyLower(declaration)
 
+            fun IrDeclaration.enqueue(description: String) {
+                enqueue(declaration, description)
+            }
+
             if (declaration is IrClass) {
                 declaration.superTypes.forEach {
-                    (it.classifierOrNull as? IrClassSymbol)?.owner?.enqueue()
+                    (it.classifierOrNull as? IrClassSymbol)?.owner?.enqueue("superTypes")
                 }
 
                 // Special hack for `IntrinsicsJs.kt` support
                 if (declaration.superTypes.any { it.isSuspendFunctionTypeOrSubtype() }) {
                     declaration.declarations.forEach {
                         if (it is IrSimpleFunction && it.name.asString().startsWith("invoke")) {
-                            it.enqueue()
+                            it.enqueue("hack for SuspendFunctionN::invoke")
                         }
                     }
                 }
@@ -166,20 +196,20 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
                 if (declaration.symbol == context.ir.symbols.coroutineImpl) {
                     declaration.declarations.forEach {
                         if (it is IrSimpleFunction && it.name.asString() == "doResume") {
-                            it.enqueue()
+                            it.enqueue("hack for CoroutineImpl::doResume")
                         }
                     }
                 }
             }
 
-            if (declaration is IrSimpleFunction) {
-                declaration.resolveFakeOverride()?.enqueue()
+            if (declaration is IrSimpleFunction && declaration.isFakeOverride) {
+                declaration.resolveFakeOverride()?.enqueue("real overridden fun")
             }
 
             // Collect instantiated classes.
             if (declaration is IrConstructor) {
                 declaration.constructedClass.let {
-                    it.enqueue()
+                    it.enqueue("constructed class")
                     constructedClasses += it
                 }
             }
@@ -202,19 +232,19 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
                 override fun visitFunctionAccess(expression: IrFunctionAccessExpression) {
                     super.visitFunctionAccess(expression)
 
-                    expression.symbol.owner.enqueue()
+                    expression.symbol.owner.enqueue("function access")
                 }
 
                 override fun visitVariableAccess(expression: IrValueAccessExpression) {
                     super.visitVariableAccess(expression)
 
-                    expression.symbol.owner.enqueue()
+                    expression.symbol.owner.enqueue("variable access")
                 }
 
                 override fun visitFieldAccess(expression: IrFieldAccessExpression) {
                     super.visitFieldAccess(expression)
 
-                    expression.symbol.owner.enqueue()
+                    expression.symbol.owner.enqueue("field access")
                 }
 
                 override fun visitCall(expression: IrCall) {
@@ -224,28 +254,28 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
                         context.intrinsics.jsBoxIntrinsic -> {
                             val inlineClass = expression.getTypeArgument(0)!!.getInlinedClass()!!
                             val constructor = inlineClass.declarations.filterIsInstance<IrConstructor>().single { it.isPrimary }
-                            constructor.enqueue()
+                            constructor.enqueue("intrinsic: jsBoxIntrinsic")
                         }
                         context.intrinsics.jsClass -> {
-                            (expression.getTypeArgument(0)!!.classifierOrFail.owner as IrDeclaration).enqueue()
+                            (expression.getTypeArgument(0)!!.classifierOrFail.owner as IrDeclaration).enqueue("intrinsic: jsClass")
                         }
                         context.intrinsics.jsObjectCreate.symbol -> {
                             val classToCreate = expression.getTypeArgument(0)!!.classifierOrFail.owner as IrClass
-                            classToCreate.enqueue()
+                            classToCreate.enqueue("intrinsic: jsObjectCreate")
                             constructedClasses += classToCreate
                         }
                         context.intrinsics.jsEquals -> {
-                            equalsMethod.enqueue()
+                            equalsMethod.enqueue("intrinsic: jsEquals")
                         }
                         context.intrinsics.jsToString -> {
-                            toStringMethod.enqueue()
+                            toStringMethod.enqueue("intrinsic: jsToString")
                         }
                         context.intrinsics.jsHashCode -> {
-                            hashCodeMethod.enqueue()
+                            hashCodeMethod.enqueue("intrinsic: jsHashCode")
                         }
                         context.intrinsics.jsPlus -> {
                             if (expression.getValueArgument(0)?.type?.classOrNull == context.irBuiltIns.stringClass) {
-                                toStringMethod.enqueue()
+                                toStringMethod.enqueue("intrinsic: jsPlus")
                             }
                         }
                     }
@@ -254,17 +284,23 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
                 override fun visitStringConcatenation(expression: IrStringConcatenation) {
                     super.visitStringConcatenation(expression)
 
-                    toStringMethod.enqueue()
+                    toStringMethod.enqueue("string concatenation")
                 }
             })
         }
 
-        fun IrOverridableDeclaration<*>.overridesUsefulFunction(): Boolean {
-            return this.overriddenSymbols.any {
-                (it.owner as? IrOverridableDeclaration<*>)?.let {
-                    it in result || it.overridesUsefulFunction()
-                } ?: false
+        fun IrOverridableDeclaration<*>.findOverriddenUsefulDeclaration(): IrOverridableDeclaration<*>? {
+            for (overriddenSymbol in this.overriddenSymbols) {
+                val overriddenDeclaration = overriddenSymbol.owner as? IrOverridableDeclaration<*> ?: continue
+
+                if (overriddenDeclaration in result) return overriddenDeclaration
+
+                overriddenDeclaration.findOverriddenUsefulDeclaration()?.let {
+                    return it
+                }
             }
+
+            return null
         }
 
         for (klass in constructedClasses) {
@@ -272,12 +308,14 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
             for (declaration in ArrayList(klass.declarations)) {
                 if (declaration in result) continue
 
-                if (declaration is IrOverridableDeclaration<*> && declaration.overridesUsefulFunction()) {
-                    declaration.enqueue()
+                if (declaration is IrOverridableDeclaration<*>) {
+                    declaration.findOverriddenUsefulDeclaration()?.let {
+                        declaration.enqueue(it, "overrides useful declaration")
+                    }
                 }
 
                 if (declaration is IrSimpleFunction && declaration.getJsNameOrKotlinName().asString() == "valueOf") {
-                    declaration.enqueue()
+                    declaration.enqueue(klass, "valueOf")
                 }
 
                 // A hack to support `toJson` and other js-specific members
@@ -285,7 +323,7 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
                     declaration is IrField && declaration.correspondingPropertySymbol?.owner?.getJsName() != null ||
                     declaration is IrSimpleFunction && declaration.correspondingPropertySymbol?.owner?.getJsName() != null
                 ) {
-                    declaration.enqueue()
+                    declaration.enqueue(klass, "annotated by @JsName")
                 }
             }
 
@@ -317,6 +355,10 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
                 }
             }
         }
+    }
+
+    if (PRINT_REACHABILITY_INFO) {
+        reachabilityInfo.forEach(::println)
     }
 
     return result
