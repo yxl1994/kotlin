@@ -461,6 +461,8 @@ private fun IrFunction.generateDefaultsFunctionImpl(
         is IrConstructor ->
             buildConstructor {
                 updateFrom(this@generateDefaultsFunctionImpl)
+                startOffset = UNDEFINED_OFFSET
+                endOffset = UNDEFINED_OFFSET
                 origin = newOrigin
                 isExternal = false
                 isPrimary = false
@@ -470,6 +472,8 @@ private fun IrFunction.generateDefaultsFunctionImpl(
         is IrSimpleFunction ->
             buildFunWithDescriptorForInlining(descriptor) {
                 updateFrom(this@generateDefaultsFunctionImpl)
+                startOffset = UNDEFINED_OFFSET
+                endOffset = UNDEFINED_OFFSET
                 name = Name.identifier("${this@generateDefaultsFunctionImpl.name}\$default")
                 origin = newOrigin
                 modality = Modality.FINAL
