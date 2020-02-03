@@ -5,7 +5,6 @@ import com.github.jengelman.gradle.plugins.shadow.transformers.TransformerContex
 import kotlinx.metadata.jvm.KmModuleVisitor
 import kotlinx.metadata.jvm.KotlinModuleMetadata
 import org.gradle.api.tasks.PathSensitivity.RELATIVE
-import proguard.gradle.ProGuardTask
 import shadow.org.apache.tools.zip.ZipEntry
 import shadow.org.apache.tools.zip.ZipOutputStream
 
@@ -20,6 +19,8 @@ buildscript {
 plugins {
     java
 }
+
+val JDK_16: String by rootProject.extra
 
 callGroovy("configureJavaOnlyJvm6Project", project)
 
@@ -43,7 +44,6 @@ dependencies {
 
     proguardDeps(kotlinStdlib())
     proguardAdditionalInJars(project(":kotlin-annotations-jvm"))
-    proguardDeps(files(firstFromJavaHomeThatExists("jre/lib/rt.jar", "../Classes/classes.jar", jdkHome = File(property("JDK_16") as String))))
 
     embedded(project(":core:type-system"))
     embedded(project(":kotlin-reflect-api"))
@@ -139,16 +139,17 @@ val stripMetadata by tasks.registering {
 
 val proguardOutput = "$libsDir/${property("archivesBaseName")}-proguard.jar"
 
-val proguard by task<ProGuardTask> {
+val proguard by task<CacheableProguardTask> {
     dependsOn(stripMetadata)
-    inputs.files(stripMetadata.get().outputs.files)
-    outputs.file(proguardOutput)
 
     injars(mapOf("filter" to "!META-INF/versions/**"), stripMetadata.get().outputs.files)
     injars(mapOf("filter" to "!META-INF/**,!**/*.kotlin_builtins"), proguardAdditionalInJars)
     outjars(proguardOutput)
+    outputs.file(proguardOutput)
 
+    jdkHome = File(JDK_16)
     libraryjars(mapOf("filter" to "!META-INF/versions/**"), proguardDeps)
+    libraryjars(firstFromJavaHomeThatExists("jre/lib/rt.jar", "../Classes/classes.jar", jdkHome = jdkHome!!))
 
     configuration("$core/reflection.jvm/reflection.pro")
 }
