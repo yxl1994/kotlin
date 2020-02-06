@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.codegen.context.CodegenContext
 import org.jetbrains.kotlin.codegen.context.CodegenContextUtil
 import org.jetbrains.kotlin.codegen.context.InlineLambdaContext
 import org.jetbrains.kotlin.codegen.context.MethodContext
+import org.jetbrains.kotlin.codegen.coroutines.SUSPEND_FUNCTION_COMPLETION_PARAMETER_NAME
 import org.jetbrains.kotlin.codegen.coroutines.unwrapInitialDescriptorForSuspendFunction
 import org.jetbrains.kotlin.codegen.optimization.common.intConstant
 import org.jetbrains.kotlin.codegen.state.GenerationState
@@ -250,6 +251,8 @@ internal fun isCapturedFieldName(fieldName: String): Boolean {
             && fieldName != ASSERTIONS_DISABLED_FIELD_NAME
             || AsmUtil.CAPTURED_THIS_FIELD == fieldName
             || AsmUtil.CAPTURED_RECEIVER_FIELD == fieldName
+            // continuation parameter has '$' at the start, thus after capturing it looks like non-captured
+            || "\$$SUSPEND_FUNCTION_COMPLETION_PARAMETER_NAME" == fieldName
 }
 
 internal fun isReturnOpcode(opcode: Int) = opcode >= Opcodes.IRETURN && opcode <= Opcodes.RETURN

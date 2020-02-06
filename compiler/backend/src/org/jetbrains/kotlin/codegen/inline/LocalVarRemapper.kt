@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.codegen.inline
 
 import org.jetbrains.kotlin.codegen.StackValue
+import org.jetbrains.kotlin.codegen.coroutines.SUSPEND_FUNCTION_COMPLETION_PARAMETER_NAME
 import org.jetbrains.kotlin.resolve.jvm.AsmTypes
 import org.jetbrains.org.objectweb.asm.Label
 import org.jetbrains.org.objectweb.asm.MethodVisitor
@@ -89,6 +90,9 @@ class LocalVarRemapper(private val params: Parameters, private val additionalShi
 
     fun visitLocalVariable(name: String, desc: String, signature: String?, start: Label, end: Label, index: Int, mv: MethodVisitor) {
         val info = doRemap(index)
+        // avoid duplication of $completion in LVT, since debugger relies on the variable
+        // TODO: KT-36945
+        if (name == SUSPEND_FUNCTION_COMPLETION_PARAMETER_NAME) return
         //add entries only for shifted vars
         if (SHIFT == info.status) {
             mv.visitLocalVariable(name, desc, signature, start, end, (info.value as StackValue.Local).index)
@@ -107,7 +111,7 @@ class LocalVarRemapper(private val params: Parameters, private val additionalShi
                 //TODO add assertion about parameter default value: descriptor is required
                 value.type.getOpcode(if (isStore) Opcodes.ISTORE else Opcodes.ILOAD)
             } else opcode
-            
+
             mv.visitVarInsn(localOpcode, value.index)
             if (remapInfo.parameterInfo != null && !isStore) {
                 StackValue.coerce(value.type, remapInfo.parameterInfo.type, mv)
