@@ -25,6 +25,13 @@ object AndAnd : IntrinsicMethod() {
             arg1.accept(codegen, data).coerceToBoolean().jumpIfTrue(target)
             mv.visitLabel(stayLabel)
         }
+
+        override fun discard() {
+            val end = Label()
+            arg0.accept(codegen, data).coerceToBoolean().jumpIfFalse(end)
+            arg1.accept(codegen, data).discard()
+            codegen.mv.visitLabel(end)
+        }
     }
 
     override fun invoke(expression: IrFunctionAccessExpression, codegen: ExpressionCodegen, data: BlockInfo): PromisedValue? {
