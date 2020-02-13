@@ -26,6 +26,13 @@ object OrOr : IntrinsicMethod() {
             arg0.accept(codegen, data).coerceToBoolean().jumpIfTrue(target)
             arg1.accept(codegen, data).coerceToBoolean().jumpIfTrue(target)
         }
+
+        override fun discard() {
+            val end = Label()
+            arg0.accept(codegen, data).coerceToBoolean().jumpIfTrue(end)
+            arg1.accept(codegen, data).discard()
+            codegen.mv.visitLabel(end)
+        }
     }
 
     override fun invoke(expression: IrFunctionAccessExpression, codegen: ExpressionCodegen, data: BlockInfo): PromisedValue? {
