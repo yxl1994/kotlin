@@ -17,6 +17,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.jetbrains.kotlin.test.InTextDirectivesUtils.isDirectiveDefined;
+import static org.jetbrains.kotlin.test.KotlinTestUtils.parseDirectives;
+import static org.jetbrains.kotlin.test.KotlinTestUtils.parseDirectivesAndFlags;
 
 public class TestFiles {
     /**
@@ -38,30 +40,45 @@ public class TestFiles {
 
     @NotNull
     public static <M, F> List<F> createTestFiles(@Nullable String testFileName, String expectedText, TestFileFactory<M, F> factory) {
-        return createTestFiles(testFileName, expectedText, factory, false, "");
+        return createTestFiles(testFileName, expectedText, factory, false, "", false);
     }
 
     @NotNull
     public static <M, F> List<F> createTestFiles(@Nullable String testFileName, String expectedText, TestFileFactory<M, F> factory, String coroutinesPackage) {
-        return createTestFiles(testFileName, expectedText, factory, false, coroutinesPackage);
+        return createTestFiles(testFileName, expectedText, factory, false, coroutinesPackage, false);
+    }
+
+    @NotNull
+    public static <M, F> List<F> createTestFiles(
+            @Nullable String testFileName,
+            String expectedText,
+            TestFileFactory<M, F> factory,
+            String coroutinesPackage,
+            boolean parseDirectivesPerFile
+    ) {
+        return createTestFiles(testFileName, expectedText, factory, false, coroutinesPackage, parseDirectivesPerFile);
     }
 
     @NotNull
     public static <M, F> List<F> createTestFiles(String testFileName, String expectedText, TestFileFactory<M, F> factory,
-            boolean preserveLocations, String coroutinesPackage) {
-        Map<String, String> directives = KotlinTestUtils.parseDirectives(expectedText);
-
+            boolean preserveLocations, String coroutinesPackage, boolean parseDirectivesPerFile) {
         List<F> testFiles = Lists.newArrayList();
+        Map<String, String> allFilesOrCommonPrefixDirectives = parseDirectivesPerFile ? null : parseDirectives(expectedText);
         Matcher matcher = FILE_OR_MODULE_PATTERN.matcher(expectedText);
         boolean hasModules = false;
+        String commonPrefixOrWholeFile;
         if (!matcher.find()) {
             assert testFileName != null : "testFileName should not be null if no FILE directive defined";
             // One file
-            testFiles.add(factory.createFile(null, testFileName, expectedText, directives));
+            testFiles.add(factory.createFile(null, testFileName, expectedText, parseDirectives(expectedText)));
+            commonPrefixOrWholeFile = expectedText;
         }
         else {
-            int processedChars = 0;
+            int processedChars = parseDirectivesPerFile ? matcher.start() : 0;
             M module = null;
+
+            commonPrefixOrWholeFile = expectedText.substring(0, processedChars);
+
             // Many files
             while (true) {
                 String moduleName = matcher.group(1);
@@ -87,9 +104,12 @@ public class TestFiles {
                 String fileText = preserveLocations ?
                                   substringKeepingLocations(expectedText, start, end) :
                                   expectedText.substring(start,end);
-                processedChars = end;
 
-                testFiles.add(factory.createFile(module, fileName, fileText, directives));
+
+                testFiles.add(factory.createFile(module, fileName, fileText, parseDirectivesPerFile ?
+                                                                             parseDirectivesAndFlags(commonPrefixOrWholeFile + fileText)
+                                                                                                    : allFilesOrCommonPrefixDirectives));
+                processedChars = end;
 
                 if (!nextFileExists) break;
             }
@@ -115,7 +135,7 @@ public class TestFiles {
                             "CoroutineUtil.kt",
                             TestHelperGeneratorKt.createTextForCoroutineHelpers(
                                     isReleaseCoroutines, checkStateMachine, checkTailCallOptimization),
-                            directives
+                            parseDirectives(commonPrefixOrWholeFile)
                     ));
         }
 

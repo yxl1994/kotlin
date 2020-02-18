@@ -71,6 +71,7 @@ import static org.jetbrains.kotlin.cli.common.output.OutputUtilsKt.writeAllTo;
 import static org.jetbrains.kotlin.codegen.CodegenTestUtil.*;
 import static org.jetbrains.kotlin.codegen.TestUtilsKt.extractUrls;
 import static org.jetbrains.kotlin.test.KotlinTestUtils.getAnnotationsJar;
+import static org.jetbrains.kotlin.test.KotlinTestUtils.parseDirectivesAndFlags;
 import static org.jetbrains.kotlin.test.clientserver.TestProcessServerKt.getBoxMethodOrNull;
 import static org.jetbrains.kotlin.test.clientserver.TestProcessServerKt.getGeneratedClass;
 
@@ -100,7 +101,7 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
     @NotNull
     protected static TestJdkKind getJdkKind(@NotNull List<TestFile> files) {
         for (TestFile file : files) {
-            if (InTextDirectivesUtils.isDirectiveDefined(file.content, "FULL_JDK")) {
+            if (file.directives.containsKey("FULL_JDK")) {
                 return TestJdkKind.FULL_JDK;
             }
         }
@@ -143,7 +144,7 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
         CompilerConfiguration configuration = KotlinTestUtils.newConfiguration(kind, jdkKind, classpath, javaSource);
         configuration.put(JVMConfigurationKeys.IR, getBackend().isIR());
 
-        updateConfigurationByDirectivesInTestFiles(testFilesWithConfigurationDirectives, configuration, coroutinesPackage);
+        updateConfigurationByDirectivesInTestFiles(testFilesWithConfigurationDirectives, configuration, coroutinesPackage, parseDirectivesPerFiles());
         updateConfiguration(configuration);
         setCustomDefaultJvmTarget(configuration);
 
@@ -156,13 +157,14 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
             @NotNull List<TestFile> testFilesWithConfigurationDirectives,
             @NotNull CompilerConfiguration configuration
     ) {
-        updateConfigurationByDirectivesInTestFiles(testFilesWithConfigurationDirectives, configuration, "");
+        updateConfigurationByDirectivesInTestFiles(testFilesWithConfigurationDirectives, configuration, "", false);
     }
 
     private static void updateConfigurationByDirectivesInTestFiles(
             @NotNull List<TestFile> testFilesWithConfigurationDirectives,
             @NotNull CompilerConfiguration configuration,
-            @NotNull String coroutinesPackage
+            @NotNull String coroutinesPackage,
+            boolean usePreparsedDirectives
     ) {
         LanguageVersionSettings explicitLanguageVersionSettings = null;
         boolean disableReleaseCoroutines = false;
@@ -170,17 +172,22 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
 
         List<String> kotlinConfigurationFlags = new ArrayList<>(0);
         for (TestFile testFile : testFilesWithConfigurationDirectives) {
-            kotlinConfigurationFlags.addAll(InTextDirectivesUtils.findListWithPrefixes(testFile.content, "// KOTLIN_CONFIGURATION_FLAGS:"));
+            String content = testFile.content;
+            Map<String, String> directives = usePreparsedDirectives ? testFile.directives : parseDirectivesAndFlags(content);
 
-            List<String> lines = InTextDirectivesUtils.findLinesWithPrefixesRemoved(testFile.content, "// JVM_TARGET:");
-            if (!lines.isEmpty()) {
-                String targetString = CollectionsKt.single(lines);
+            String configurationFlags = directives.get("KOTLIN_CONFIGURATION_FLAGS");
+            if (configurationFlags != null) {
+                kotlinConfigurationFlags.addAll(ArraysKt.asList(configurationFlags.split(",")));
+            }
+
+            String targetString = directives.get("JVM_TARGET");
+            if (targetString != null) {
                 JvmTarget jvmTarget = JvmTarget.Companion.fromString(targetString);
                 assert jvmTarget != null : "Unknown target: " + targetString;
                 configuration.put(JVMConfigurationKeys.JVM_TARGET, jvmTarget);
             }
 
-            String version = InTextDirectivesUtils.findStringWithPrefixes(testFile.content, "// LANGUAGE_VERSION:");
+            String version = directives.get("LANGUAGE_VERSION");
             if (version != null) {
                 throw new AssertionError(
                         "Do not use LANGUAGE_VERSION directive in compiler tests because it's prone to limiting the test\n" +
@@ -190,19 +197,17 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
                 );
             }
 
-            if (!InTextDirectivesUtils.findLinesWithPrefixesRemoved(testFile.content, "// COMMON_COROUTINES_TEST").isEmpty()) {
-                assert !testFile.content.contains("COROUTINES_PACKAGE") : "Must replace COROUTINES_PACKAGE prior to tests compilation";
+            if (directives.containsKey("COMMON_COROUTINES_TEST")) {
+                assert !directives.containsKey("COROUTINES_PACKAGE") : "Must replace COROUTINES_PACKAGE prior to tests compilation";
                 if (DescriptorUtils.COROUTINES_PACKAGE_FQ_NAME_EXPERIMENTAL.asString().equals(coroutinesPackage)) {
                     disableReleaseCoroutines = true;
                     includeCompatExperimentalCoroutines = true;
                 }
             }
 
-            if (testFile.content.contains(DescriptorUtils.COROUTINES_PACKAGE_FQ_NAME_EXPERIMENTAL.asString())) {
+            if (content.contains(DescriptorUtils.COROUTINES_PACKAGE_FQ_NAME_EXPERIMENTAL.asString())) {
                 includeCompatExperimentalCoroutines = true;
             }
-
-            Map<String, String> directives = KotlinTestUtils.parseDirectives(testFile.content);
 
             LanguageVersionSettings fileLanguageVersionSettings = parseLanguageVersionSettings(directives);
             if (fileLanguageVersionSettings != null) {
@@ -742,10 +747,10 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
         boolean addRuntime = false;
         boolean addReflect = false;
         for (TestFile file : files) {
-            if (InTextDirectivesUtils.isDirectiveDefined(file.content, "WITH_RUNTIME")) {
+            if (file.directives.containsKey("WITH_RUNTIME")) {
                 addRuntime = true;
             }
-            if (InTextDirectivesUtils.isDirectiveDefined(file.content, "WITH_REFLECT")) {
+            if (file.directives.containsKey("WITH_REFLECT")) {
                 addReflect = true;
             }
         }
@@ -781,10 +786,16 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
     public static class TestFile implements Comparable<TestFile> {
         public final String name;
         public final String content;
+        public final Map<String, String> directives;
 
         public TestFile(@NotNull String name, @NotNull String content) {
+            this(name, content, Collections.emptyMap());
+        }
+
+        public TestFile(@NotNull String name, @NotNull String content, @NotNull Map<String, String> directives) {
             this.name = name;
             this.content = content;
+            this.directives = directives;
         }
 
         @Override
@@ -832,13 +843,17 @@ public abstract class CodegenTestCase extends KtUsefulTestCase {
             @NotNull
             @Override
             public TestFile create(@NotNull String fileName, @NotNull String text, @NotNull Map<String, String> directives) {
-                return new TestFile(fileName, text);
+                return new TestFile(fileName, text, directives);
             }
-        }, coroutinesPackage);
+        }, coroutinesPackage, parseDirectivesPerFiles());
         if (InTextDirectivesUtils.isDirectiveDefined(expectedText, "WITH_HELPERS")) {
             testFiles.add(new TestFile("CodegenTestHelpers.kt", TestHelperGeneratorKt.createTextForCodegenTestHelpers(getBackend())));
         }
         return testFiles;
+    }
+
+    protected boolean parseDirectivesPerFiles() {
+        return false;
     }
 
     @NotNull
