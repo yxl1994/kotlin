@@ -224,7 +224,7 @@ class MoveKotlinDeclarationsProcessor(
                 val name = lightElement.getKotlinFqName()?.quoteIfNeeded()?.asString()
                 if (name != null) {
                     fun searchForKotlinNameUsages(results: ArrayList<UsageInfo>) {
-                        TextOccurrencesUtil.findNonCodeUsages(
+                        BunchedDeprecation.findNonCodeUsages(
                             lightElement,
                             name,
                             descriptor.searchInCommentsAndStrings,
