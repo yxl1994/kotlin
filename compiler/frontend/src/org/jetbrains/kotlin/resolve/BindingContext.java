@@ -274,6 +274,8 @@ public interface BindingContext {
 
     WritableSlice<KtExpression, Ref<VariableDescriptor>> NEW_INFERENCE_CATCH_EXCEPTION_PARAMETER = Slices.createSimpleSlice();
 
+    WritableSlice<Call, ValueArgument> CONVENTIONAL_CONTAINS_IN_WHEN = Slices.createSimpleSlice();
+
     @SuppressWarnings("UnusedDeclaration")
     @Deprecated // This field is needed only for the side effects of its initializer
             Void _static_initializer = BasicWritableSlice.initSliceDebugNames(BindingContext.class);
