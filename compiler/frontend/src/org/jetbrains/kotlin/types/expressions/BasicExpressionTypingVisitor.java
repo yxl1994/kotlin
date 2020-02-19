@@ -1402,8 +1402,10 @@ public class BasicExpressionTypingVisitor extends ExpressionTypingVisitor {
         ExpressionReceiver receiver = safeGetExpressionReceiver(facade, right, contextWithNoExpectedType);
         ExpressionTypingContext contextWithDataFlow = context.replaceDataFlowInfo(dataFlowInfo);
 
-        Call containsCall = CallMaker.makeCall(callElement, receiver, null, operationSign, Collections.singletonList(leftArgument));
-        context.trace.record(CONVENTIONAL_CONTAINS_IN_WHEN, containsCall, leftArgument);
+        Call containsCall = CallMaker.makeCall(
+                callElement, receiver, null, operationSign,
+                Collections.singletonList(leftArgument), Call.CallType.CONTAINS
+        );
 
         OverloadResolutionResults<FunctionDescriptor> resolutionResult = components.callResolver.resolveCallWithGivenName(
                 contextWithDataFlow,

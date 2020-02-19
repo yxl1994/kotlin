@@ -333,7 +333,7 @@ internal fun createSimplePSICallArgument(
             // so we use a fast-path here to avoid calling transformToReceiverWithSmartCastInfo function
             ReceiverValueWithSmartCastInfo(expressionReceiver, emptySet(), isStable = true)
         } else {
-            val useDataFlowInfoBeforeArgument = bindingContext[BindingContext.CONVENTIONAL_CONTAINS_IN_WHEN, call] == valueArgument
+            val useDataFlowInfoBeforeArgument = call.callType == Call.CallType.CONTAINS
             transformToReceiverWithSmartCastInfo(
                 ownerDescriptor, bindingContext,
                 if (useDataFlowInfoBeforeArgument) dataFlowInfoBeforeThisArgument else typeInfoForArgument.dataFlowInfo,
