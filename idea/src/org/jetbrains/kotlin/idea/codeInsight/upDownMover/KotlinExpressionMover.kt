@@ -12,6 +12,7 @@ import com.intellij.psi.*
 import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.idea.core.util.isMultiLine
 import org.jetbrains.kotlin.idea.formatter.TrailingCommaHelper
+import org.jetbrains.kotlin.idea.formatter.isComma
 import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfTypesAndPredicate
@@ -52,9 +53,8 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
         else -> null
     }
 
-    override fun checkSourceElement(element: PsiElement): Boolean {
-        return PsiTreeUtil.instanceOf(element, *MOVABLE_ELEMENT_CLASSES) || element.node.elementType === KtTokens.SEMICOLON
-    }
+    override fun checkSourceElement(element: PsiElement): Boolean =
+        PsiTreeUtil.instanceOf(element, *MOVABLE_ELEMENT_CLASSES) || element.node.elementType === KtTokens.SEMICOLON
 
     override fun getElementSourceLineRange(
         element: PsiElement,
@@ -117,17 +117,18 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
         down: Boolean
     ) {
         if (parametersOrArgsToMove != null) {
-            val element1 = getLastSiblingOfSameTypeInLine(parametersOrArgsToMove!!.first, editor)
-            val element2 = getLastSiblingOfSameTypeInLine(parametersOrArgsToMove!!.second, editor)
-            val withTrailingComma = element1.parent
+            val (first, second) = parametersOrArgsToMove ?: return
+            val lastElementOnFirstLine = getLastSiblingOfSameTypeInLine(first, editor)
+            val lastElementOnSecondLine = getLastSiblingOfSameTypeInLine(second, editor)
+            val withTrailingComma = lastElementOnFirstLine.parent
                 ?.safeAs<KtElement>()
                 ?.let {
                     TrailingCommaHelper.needComma(it, CodeStyle.getSettings(it.project), true)
                 } == true
 
-            fixCommaIfNeeded(element1, down && isLastOfItsKind(element2, true), withTrailingComma)
-            fixCommaIfNeeded(element2, !down && isLastOfItsKind(element1, true), withTrailingComma)
-            PsiDocumentManager.getInstance(editor.project!!).doPostponedOperationsAndUnblockDocument(editor.document)
+            fixCommaIfNeeded(lastElementOnFirstLine, down && isLastOfItsKind(lastElementOnSecondLine, true), withTrailingComma)
+            fixCommaIfNeeded(lastElementOnSecondLine, !down && isLastOfItsKind(lastElementOnFirstLine, true), withTrailingComma)
+            editor.project?.let { PsiDocumentManager.getInstance(it).doPostponedOperationsAndUnblockDocument(editor.document) }
         }
     }
 
@@ -189,7 +190,7 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
             var nextElement: PsiElement? = null
             var nextExpression: PsiElement? = null
             do {
-                val sibling = StatementUpDownMover.firstNonWhiteElement(current!!.nextSibling, true)
+                val sibling = StatementUpDownMover.firstNonWhiteElement(current?.nextSibling, true)
                 if (sibling != null && nextElement == null) {
                     nextElement = sibling
                 }
@@ -199,13 +200,13 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
                     break
                 }
 
-                current = current.parent
+                current = current?.parent
             } while (current != null && !PsiTreeUtil.instanceOf(current, *BLOCKLIKE_ELEMENT_CLASSES))
 
             if (nextExpression == null) return BraceStatus.NOT_MOVABLE
             val doc = editor.document
             info.toMove = LineRange(closingBrace, closingBrace, doc)
-            info.toMove2 = LineRange(nextElement!!, nextExpression)
+            info.toMove2 = nextElement?.let { LineRange(it, nextExpression) }
             info.indentSource = true
             return BraceStatus.MOVABLE
         }
@@ -265,7 +266,7 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
                 if (parent is KtBlockExpression) return parent
                 val sibling = if (down) current.nextSibling else current.prevSibling
                 current = if (sibling != null) {
-                    val block = KtPsiUtil.getOutermostDescendantElement(sibling, down, CHECK_BLOCK) as KtBlockExpression?
+                    val block = KtPsiUtil.getOutermostDescendantElement(sibling, down, CHECK_BLOCK) as? KtBlockExpression
                     if (block != null) return block
                     sibling
                 } else {
@@ -285,7 +286,7 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
                 KtPsiUtil.getOutermostDescendantElement(element, down, IS_CALL_EXPRESSION) as KtCallExpression? ?: return null
             val functionLiterals = callExpression.lambdaArguments
             if (functionLiterals.isEmpty()) return null
-            val lambdaExpression = functionLiterals[0].getLambdaExpression() ?: return null
+            val lambdaExpression = functionLiterals.firstOrNull()?.getLambdaExpression() ?: return null
             val document = editor.document
             val range = lambdaExpression.textRange
             return if (document.getLineNumber(range.startOffset) == document.getLineNumber(range.endOffset)) null else lambdaExpression.bodyExpression
@@ -357,7 +358,7 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
                 if (!(parent is KtBlockExpression || parent is KtFunctionLiteral)) return null
                 val newBlock: KtBlockExpression?
                 if (parent is KtFunctionLiteral) {
-                    newBlock = findClosestBlock(parent.bodyExpression!!, down, false)
+                    newBlock = parent.bodyExpression?.let { findClosestBlock(it, down, false) }
                     if (!down) {
                         val arrow = parent.arrow
                         if (arrow != null) {
@@ -429,7 +430,7 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
             var current: PsiElement? = sibling
             while (true) {
                 val nextLine = getElementLine(current, editor, !down) + if (down) 1 else -1
-                current = firstNonWhiteSibling(current!!, down)
+                current = current?.let { firstNonWhiteSibling(it, down) }
                 if (current !is PsiComment) {
                     break
                 }
@@ -455,54 +456,60 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
                 }
             }
 
-            return if (hasUpdate) currentStart!! to currentEnd!! else null
+            val resultStart = currentStart ?: return null
+            val resultEnd = currentEnd ?: return null
+            return if (hasUpdate) resultStart to resultEnd else null
         }
 
         private fun getWhenEntryTargetRange(
             editor: Editor,
             sibling: PsiElement,
             down: Boolean
-        ): LineRange? = if (sibling.node.elementType === (if (down) KtTokens.RBRACE else KtTokens.LBRACE) &&
-            PsiTreeUtil.getParentOfType(sibling, KtWhenEntry::class.java) == null
-        )
-            null
-        else
-            LineRange(sibling, sibling, editor.document)
+        ): LineRange? =
+            if (sibling.node.elementType === (if (down) KtTokens.RBRACE else KtTokens.LBRACE) &&
+                PsiTreeUtil.getParentOfType(sibling, KtWhenEntry::class.java) == null
+            )
+                null
+            else
+                LineRange(sibling, sibling, editor.document)
 
         private fun getMovableElement(element: PsiElement, lookRight: Boolean): PsiElement? {
             if (element.node.elementType === KtTokens.SEMICOLON) {
                 return element
             }
 
-            var movableElement: PsiElement? = element.getParentOfTypesAndPredicate(
+            val movableElement = element.getParentOfTypesAndPredicate(
                 strict = false,
                 parentClasses = *MOVABLE_ELEMENT_CLASSES,
                 predicate = MOVABLE_ELEMENT_CONSTRAINT
             ) ?: return null
 
-            if (isBracelessBlock(movableElement!!)) {
-                movableElement = StatementUpDownMover.firstNonWhiteElement(
+            if (isBracelessBlock(movableElement)) {
+                return StatementUpDownMover.firstNonWhiteElement(
                     if (lookRight)
                         movableElement.lastChild
                     else
                         movableElement.firstChild, !lookRight
                 )
+            } else {
+                return movableElement
             }
-
-            return movableElement
         }
 
         private fun isLastOfItsKind(element: PsiElement, down: Boolean): Boolean =
             getSiblingOfType(element, down, element.javaClass) == null
 
         private fun isForbiddenMove(element: PsiElement, down: Boolean): Boolean =
-            if (element is KtParameter || element is KtValueArgument) {
+            if (element is KtParameter || element is KtValueArgument)
                 isLastOfItsKind(element, down)
-            } else
+            else
                 false
 
-        private fun isBracelessBlock(element: PsiElement): Boolean = if (element !is KtBlockExpression) false
-        else element.lBrace == null && element.rBrace == null
+        private fun isBracelessBlock(element: PsiElement): Boolean =
+            if (element !is KtBlockExpression)
+                false
+            else
+                element.lBrace == null && element.rBrace == null
 
         private fun adjustSibling(
             editor: Editor,
@@ -512,12 +519,11 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
         ): PsiElement? {
             val element = if (down) sourceRange.lastElement else sourceRange.firstElement
             var sibling = if (down) element.nextSibling else element.prevSibling
-            var whiteSpaceTestSubject = sibling
-            if (sibling == null) {
+            val whiteSpaceTestSubject = sibling ?: kotlin.run {
                 val parent = element.parent
-                if (parent != null && isBracelessBlock(parent)) {
-                    whiteSpaceTestSubject = if (down) parent.nextSibling else parent.prevSibling
-                }
+                if (parent == null || !isBracelessBlock(parent)) return@run null
+
+                if (down) parent.nextSibling else parent.prevSibling
             }
 
             if (whiteSpaceTestSubject is PsiWhiteSpace) {
@@ -529,45 +535,35 @@ class KotlinExpressionMover : AbstractKotlinUpDownMover() {
                     return null
                 }
 
-                if (sibling != null) {
-                    sibling = StatementUpDownMover.firstNonWhiteElement(sibling, down)
-                }
+                if (sibling != null) sibling = StatementUpDownMover.firstNonWhiteElement(sibling, down)
             }
 
-            if (sibling == null) {
-                val callExpression = PsiTreeUtil.getParentOfType(element, KtCallExpression::class.java)
-                if (callExpression != null) {
-                    val dslBlock = getDSLLambdaBlock(editor, callExpression, down)
-                    if (PsiTreeUtil.isAncestor(dslBlock, element, false)) {
-                        val blockParent = dslBlock!!.parent
+            if (sibling != null) return sibling
+            val callExpression = PsiTreeUtil.getParentOfType(element, KtCallExpression::class.java)
+            if (callExpression != null) {
+                val dslBlock = getDSLLambdaBlock(editor, callExpression, down)
+                if (PsiTreeUtil.isAncestor(dslBlock, element, false)) {
+                    dslBlock?.parent?.let { blockParent ->
                         return if (down)
                             KtPsiUtil.findChildByType(blockParent, KtTokens.RBRACE)
                         else
                             KtPsiUtil.findChildByType(blockParent, KtTokens.LBRACE)
                     }
                 }
-
-                info.toMove2 = null
-                return null
             }
 
-            return sibling
+            info.toMove2 = null
+            return null
         }
 
-        private fun getComma(element: PsiElement): PsiElement? {
-            val sibling = firstNonWhiteSibling(element, true)
-            return if (sibling != null && sibling.node.elementType === KtTokens.COMMA)
-                sibling
-            else
-                null
-        }
+        private fun getComma(element: PsiElement): PsiElement? = firstNonWhiteSibling(element, true)?.takeIf(PsiElement::isComma)
 
         private fun fixCommaIfNeeded(element: PsiElement, willBeLast: Boolean, withTrailingComma: Boolean) {
             val comma = getComma(element)
             if (willBeLast && comma != null && !withTrailingComma) {
                 comma.delete()
             } else if (!willBeLast && comma == null) {
-                val parent = element.parent!!
+                val parent = element.parent
                 parent.addAfter(KtPsiFactory(parent.project).createComma(), element)
             }
         }
