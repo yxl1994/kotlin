@@ -197,6 +197,12 @@ if (kotlinBuildProperties.isInJpsBuildIdeaSync) {
                             pattern = "org.jetbrains.kotlin.*"
                             configureForKotlin()
                         }
+
+                        junit("[JPS] Fir Compiler Tests") {
+                            moduleName = "kotlin.compiler.test"
+                            pattern = "^(org\\.jetbrains\\.kotlin\\.fir((?!\\.lightTree\\.benchmark)(\\.\\w+)*)\\.((?!(TreesCompareTest|TotalKotlinTest|RawFirBuilderTotalKotlinTestCase))\\w+)|org\\.jetbrains\\.kotlin\\.codegen\\.ir\\.FirBlackBoxCodegenTestGenerated)\$"
+                            configureForKotlin()
+                        }
                     }
                 }
             }
@@ -245,7 +251,7 @@ fun NamedDomainObjectContainer<TopLevelArtifact>.kotlinJpsPluginJar() {
         file("${jpsPluginProject.rootDir}/resources/kotlinManifest.properties")
     }
 }
-
+// ^org\.jetbrains\.kotlin\.fir((?!\.lightTree\.benchmark)[a-z]*)((?!(AA|BB))\w+)$
 fun NamedDomainObjectContainer<TopLevelArtifact>.dist() {
     val distLibrariesProject = project(":kotlin-stdlib:jps-build")
     val stdlibMinimal by distLibrariesProject.configurations
