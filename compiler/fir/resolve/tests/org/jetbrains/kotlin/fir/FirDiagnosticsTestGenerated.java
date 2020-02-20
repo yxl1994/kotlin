@@ -1319,6 +1319,11 @@ public class FirDiagnosticsTestGenerated extends AbstractFirDiagnosticsTest {
             runTest("compiler/fir/resolve/testData/resolve/problems/inheritanceJKJ.kt");
         }
 
+        @TestMetadata("innerConstructorOnInstance.kt")
+        public void testInnerConstructorOnInstance() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/problems/innerConstructorOnInstance.kt");
+        }
+
         @TestMetadata("javaAccessorConversion.kt")
         public void testJavaAccessorConversion() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/problems/javaAccessorConversion.kt");

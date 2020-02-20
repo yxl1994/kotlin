@@ -1,0 +1,21 @@
+FILE: test.kt
+    public final class Outer : R|JavaOuter| {
+        public constructor(): R|Outer| {
+            super<R|JavaOuter|>()
+        }
+
+        public final inner class Inner : R|kotlin/Any| {
+            public constructor(): R|Outer.Inner| {
+                super<R|kotlin/Any|>()
+            }
+
+        }
+
+    }
+    public final fun test(o: R|Outer|, jo: R|JavaOuter|): R|kotlin/Unit| {
+        lval inner: R|Outer.Inner| = R|<local>/o|.R|/Outer.Inner.Inner|()
+        lval javaInner: R|JavaOuter.JavaInner| = R|<local>/jo|.R|/JavaOuter.JavaInner.JavaInner|()
+        lval javaViaKotlinInner: R|JavaOuter.JavaInner| = R|<local>/o|.R|/JavaOuter.JavaInner.JavaInner|()
+        lval otherInner: R|BaseOuter.BaseInner| = R|<local>/o|.R|/BaseOuter.BaseInner.BaseInner|()
+        lval anotherInner: R|BaseOuter.BaseInner| = R|<local>/jo|.R|/BaseOuter.BaseInner.BaseInner|()
+    }
