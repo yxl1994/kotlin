@@ -393,7 +393,12 @@ internal fun sourcesJarTask(
 internal fun Project.setupGeneralKotlinExtensionParameters() {
     val sourceSetsInMainCompilation by lazy {
         CompilationSourceSetUtil.compilationsBySourceSets(project).filterValues { compilations ->
-            compilations.any { it.name == KotlinCompilation.MAIN_COMPILATION_NAME } // what to do with android?
+            compilations.any {
+                // kotlin main compilation
+                it.name == KotlinCompilation.MAIN_COMPILATION_NAME
+                        // android compilation which is NOT in tested variant
+                        || (it as? KotlinJvmAndroidCompilation)?.let { getTestedVariantData(it.androidVariant) == null } == true
+            }
         }.keys
     }
 
