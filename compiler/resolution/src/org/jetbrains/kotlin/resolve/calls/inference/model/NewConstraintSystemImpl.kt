@@ -13,9 +13,7 @@ import org.jetbrains.kotlin.resolve.calls.inference.components.ResultTypeResolve
 import org.jetbrains.kotlin.resolve.calls.model.KotlinCallDiagnostic
 import org.jetbrains.kotlin.resolve.calls.model.OnlyInputTypesDiagnostic
 import org.jetbrains.kotlin.resolve.calls.model.ResolvedAtom
-import org.jetbrains.kotlin.types.AbstractTypeChecker
-import org.jetbrains.kotlin.types.IntersectionTypeConstructor
-import org.jetbrains.kotlin.types.KotlinType
+import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.checker.NewKotlinTypeChecker
 import org.jetbrains.kotlin.types.model.*
 import org.jetbrains.kotlin.utils.SmartList
@@ -369,5 +367,15 @@ class NewConstraintSystemImpl(
         val constraints = storage.notFixedTypeVariables[type.typeConstructor()]?.constraints ?: return false
 
         return constraints.any { (it.kind == ConstraintKind.UPPER || it.kind == ConstraintKind.EQUALITY) && it.type.isUnit() }
+    }
+
+    // ResultTypeResolver.Context
+    override fun createTypeWithAlternativeForPublicDeclaration(
+        baseType: KotlinTypeMarker,
+        replacement: KotlinTypeMarker,
+    ): KotlinTypeMarker {
+        require(baseType is SimpleType) { "$baseType should be SimpleType" }
+        require(replacement is KotlinType) { "$replacement should be KotlinType" }
+        return baseType.wrapEnhancement(replacement.unwrap().asAlternativeType())
     }
 }

@@ -20,6 +20,8 @@ import org.jetbrains.kotlin.resolve.calls.NewCommonSuperTypeCalculator
 import org.jetbrains.kotlin.resolve.calls.inference.components.TypeVariableDirectionCalculator.ResolveDirection
 import org.jetbrains.kotlin.resolve.calls.inference.model.*
 import org.jetbrains.kotlin.types.AbstractTypeApproximator
+import org.jetbrains.kotlin.types.AbstractTypeChecker
+import org.jetbrains.kotlin.types.IntersectionTypeConstructor
 import org.jetbrains.kotlin.types.TypeApproximatorConfiguration
 import org.jetbrains.kotlin.types.model.*
 
@@ -31,10 +33,16 @@ class ResultTypeResolver(
         fun isProperType(type: KotlinTypeMarker): Boolean
         fun buildNotFixedVariablesToStubTypesSubstitutor(): TypeSubstitutorMarker
         fun isReified(variable: TypeVariableMarker): Boolean
+        fun createTypeWithAlternativeForPublicDeclaration(baseType: KotlinTypeMarker, replacement: KotlinTypeMarker): KotlinTypeMarker
     }
 
-    fun findResultType(c: Context, variableWithConstraints: VariableWithConstraints, direction: ResolveDirection): KotlinTypeMarker {
-        findResultTypeOrNull(c, variableWithConstraints, direction)?.let { return it }
+    fun findResultType(
+        c: Context,
+        variableWithConstraints: VariableWithConstraints,
+        direction: ResolveDirection,
+        isTopLevel: Boolean
+    ): KotlinTypeMarker {
+        findResultTypeOrNull(c, variableWithConstraints, direction, isTopLevel)?.let { return it }
 
         // no proper constraints
         return run {
@@ -45,25 +53,37 @@ class ResultTypeResolver(
     private fun findResultTypeOrNull(
         c: Context,
         variableWithConstraints: VariableWithConstraints,
-        direction: ResolveDirection
+        direction: ResolveDirection,
+        isTopLevel: Boolean,
     ): KotlinTypeMarker? {
         findResultIfThereIsEqualsConstraint(c, variableWithConstraints)?.let { return it }
 
         val subType = c.findSubType(variableWithConstraints)
         val superType = c.findSuperType(variableWithConstraints)
         return if (direction == ResolveDirection.TO_SUBTYPE || direction == ResolveDirection.UNKNOWN) {
-            c.resultType(subType, superType, variableWithConstraints)
+            c.resultType(subType, superType, variableWithConstraints, isTopLevel)
         } else {
-            c.resultType(superType, subType, variableWithConstraints)
+            c.resultType(superType, subType, variableWithConstraints, isTopLevel)
         }
     }
 
     private fun Context.resultType(
         firstCandidate: KotlinTypeMarker?,
         secondCandidate: KotlinTypeMarker?,
-        variableWithConstraints: VariableWithConstraints
+        variableWithConstraints: VariableWithConstraints,
+        isTopLevel: Boolean,
     ): KotlinTypeMarker? {
         if (firstCandidate == null || secondCandidate == null) return firstCandidate ?: secondCandidate
+
+        if (isTopLevel && firstCandidate.typeConstructor() is IntersectionTypeConstructor) {
+            val approximated = typeApproximator.approximateToSuperType(firstCandidate, TypeApproximatorConfiguration.PublicDeclaration)
+                ?: firstCandidate
+            return if (AbstractTypeChecker.isSubtypeOf(this, approximated, secondCandidate)) {
+                firstCandidate
+            } else {
+                createTypeWithAlternativeForPublicDeclaration(firstCandidate, secondCandidate)
+            }
+        }
 
         if (isSuitableType(firstCandidate, variableWithConstraints)) return firstCandidate
 
@@ -74,7 +94,10 @@ class ResultTypeResolver(
         }
     }
 
-    private fun Context.isSuitableType(resultType: KotlinTypeMarker, variableWithConstraints: VariableWithConstraints): Boolean {
+    private fun Context.isSuitableType(
+        resultType: KotlinTypeMarker,
+        variableWithConstraints: VariableWithConstraints
+    ): Boolean {
         val filteredConstraints = variableWithConstraints.constraints.filter { isProperType(it.type) }
         for (constraint in filteredConstraints) {
             if (!checkConstraint(this, constraint.type, constraint.kind, resultType)) return false

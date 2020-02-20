@@ -10223,6 +10223,11 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 runTest("compiler/testData/diagnostics/tests/inference/tooEagerSmartcast.kt");
             }
 
+            @TestMetadata("topLevelIntersection.kt")
+            public void testTopLevelIntersection() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/inference/topLevelIntersection.kt");
+            }
+
             @TestMetadata("tryNumberLowerBoundsBeforeUpperBounds.kt")
             public void testTryNumberLowerBoundsBeforeUpperBounds() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/inference/tryNumberLowerBoundsBeforeUpperBounds.kt");
@@ -11016,6 +11021,44 @@ public class DiagnosticsUsingJavacTestGenerated extends AbstractDiagnosticsUsing
                 @TestMetadata("platformNothingAsUsefulConstraint.kt")
                 public void testPlatformNothingAsUsefulConstraint() throws Exception {
                     runTest("compiler/testData/diagnostics/tests/inference/nothingType/platformNothingAsUsefulConstraint.kt");
+                }
+            }
+
+            @TestMetadata("compiler/testData/diagnostics/tests/inference/publicApproximation")
+            @TestDataPath("$PROJECT_ROOT")
+            @RunWith(JUnit3RunnerWithInners.class)
+            public static class PublicApproximation extends AbstractDiagnosticsUsingJavacTest {
+                private void runTest(String testDataFilePath) throws Exception {
+                    KotlinTestUtils.runTest(this::doTest, this, testDataFilePath);
+                }
+
+                public void testAllFilesPresentInPublicApproximation() throws Exception {
+                    KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/diagnostics/tests/inference/publicApproximation"), Pattern.compile("^(.+)\\.kt$"), Pattern.compile("^(.+)\\.fir\\.kts?$"), true);
+                }
+
+                @TestMetadata("approximatedIntersectionMorePreciseThanBound.kt")
+                public void testApproximatedIntersectionMorePreciseThanBound() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/publicApproximation/approximatedIntersectionMorePreciseThanBound.kt");
+                }
+
+                @TestMetadata("declarationTypes.kt")
+                public void testDeclarationTypes() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/publicApproximation/declarationTypes.kt");
+                }
+
+                @TestMetadata("intersectionAlternative.kt")
+                public void testIntersectionAlternative() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/publicApproximation/intersectionAlternative.kt");
+                }
+
+                @TestMetadata("intersectionLocations.kt")
+                public void testIntersectionLocations() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/publicApproximation/intersectionLocations.kt");
+                }
+
+                @TestMetadata("lambdaReturnTypeApproximation.kt")
+                public void testLambdaReturnTypeApproximation() throws Exception {
+                    runTest("compiler/testData/diagnostics/tests/inference/publicApproximation/lambdaReturnTypeApproximation.kt");
                 }
             }
 
