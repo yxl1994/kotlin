@@ -1001,11 +1001,6 @@ public class CliTestGenerated extends AbstractCliTest {
             runTest("compiler/testData/cli/js-dce/invalidFilename.args");
         }
 
-        @TestMetadata("jsExtraHelp.args")
-        public void testJsExtraHelp() throws Exception {
-            runTest("compiler/testData/cli/js-dce/jsExtraHelp.args");
-        }
-
         @TestMetadata("nonExistingSourcePath.args")
         public void testNonExistingSourcePath() throws Exception {
             runTest("compiler/testData/cli/js-dce/nonExistingSourcePath.args");
