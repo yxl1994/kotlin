@@ -1,0 +1,6 @@
+FILE: callOnEnumEntry.kt
+    public final fun test(): R|kotlin/Unit| {
+        lval value: R|kotlin/Int| = Q|kotlin/text/CharCategory|.R|kotlin/text/CharCategory.UNASSIGNED|.R|kotlin/text/CharCategory.value|
+        lval code: R|kotlin/String| = Q|kotlin/text/CharCategory|.R|kotlin/text/CharCategory.UNASSIGNED|.R|kotlin/text/CharCategory.code|
+        lval contains: R|kotlin/Boolean| = Q|kotlin/text/CharCategory|.R|kotlin/text/CharCategory.UNASSIGNED|.R|kotlin/text/CharCategory.contains|(Char(0))
+    }

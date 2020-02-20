@@ -1,0 +1,74 @@
+FILE: AnotherEnum.kt
+    public final enum class AnotherEnum : R|kotlin/Enum<AnotherEnum>| {
+        private constructor(): R|AnotherEnum| {
+            super<R|kotlin/Any|>()
+        }
+
+        public final static enum entry SIMPLE: R|AnotherEnum| = object : R|AnotherEnum| {
+            private constructor(): R|anonymous| {
+                super<R|AnotherEnum|>()
+            }
+
+        }
+
+        public final static enum entry COMPLEX: R|AnotherEnum| = object : R|AnotherEnum| {
+            private constructor(): R|anonymous| {
+                super<R|AnotherEnum|>()
+            }
+
+            public final override fun baz(): R|kotlin/Unit| {
+            }
+
+        }
+
+        public open fun baz(): R|kotlin/Unit| {
+        }
+
+        public final static fun values(): R|kotlin/Array<AnotherEnum>| {
+        }
+
+        public final static fun valueOf(value: R|kotlin/String|): R|AnotherEnum| {
+        }
+
+    }
+FILE: test.kt
+    public final enum class SomeEnum : R|kotlin/Enum<SomeEnum>| {
+        private constructor(): R|SomeEnum| {
+            super<R|kotlin/Any|>()
+        }
+
+        public final static enum entry SIMPLE: R|SomeEnum| = object : R|SomeEnum| {
+            private constructor(): R|anonymous| {
+                super<R|SomeEnum|>()
+            }
+
+        }
+
+        public final static enum entry COMPLEX: R|SomeEnum| = object : R|SomeEnum| {
+            private constructor(): R|anonymous| {
+                super<R|SomeEnum|>()
+            }
+
+            public final override fun foo(): R|kotlin/Unit| {
+            }
+
+        }
+
+        public open fun foo(): R|kotlin/Unit| {
+        }
+
+        public final static fun values(): R|kotlin/Array<SomeEnum>| {
+        }
+
+        public final static fun valueOf(value: R|kotlin/String|): R|SomeEnum| {
+        }
+
+    }
+    public final fun test(): R|kotlin/Unit| {
+        Q|SomeEnum|.R|/SomeEnum.SIMPLE|.R|/SomeEnum.foo|()
+        Q|SomeEnum|.R|/SomeEnum.COMPLEX|.R|/SomeEnum.foo|()
+        Q|JavaEnum|.R|/JavaEnum.FIRST|.R|/JavaEnum.bar|()
+        Q|JavaEnum|.R|/JavaEnum.SECOND|.R|/JavaEnum.bar|()
+        Q|AnotherEnum|.R|/AnotherEnum.SIMPLE|.R|/AnotherEnum.baz|()
+        Q|AnotherEnum|.R|/AnotherEnum.COMPLEX|.R|/AnotherEnum.baz|()
+    }
