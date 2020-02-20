@@ -1,0 +1,11 @@
+FILE: JetRunConfiguration.kt
+    public final class JetRunConfiguration : R|ModuleBasedConfiguration| {
+        public constructor(): R|JetRunConfiguration| {
+            super<R|ModuleBasedConfiguration|>()
+        }
+
+    }
+FILE: test.kt
+    public final fun test(configuration: R|KotlinRunConfiguration|): R|kotlin/Unit| {
+        lval module: R|ft<kotlin/String, kotlin/String?>!| = R|<local>/configuration|.R|/ModuleBasedConfiguration.module|
+    }
