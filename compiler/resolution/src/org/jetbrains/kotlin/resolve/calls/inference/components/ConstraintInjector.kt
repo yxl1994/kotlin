@@ -18,14 +18,14 @@ package org.jetbrains.kotlin.resolve.calls.inference.components
 
 
 import org.jetbrains.kotlin.resolve.calls.inference.model.*
-import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintKind.LOWER
-import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintKind.UPPER
+import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintKind.*
 import org.jetbrains.kotlin.resolve.calls.model.KotlinCallDiagnostic
 import org.jetbrains.kotlin.types.*
 import org.jetbrains.kotlin.types.checker.KotlinTypeRefiner
 import org.jetbrains.kotlin.types.model.*
 import org.jetbrains.kotlin.types.refinement.TypeRefinement
 import java.util.*
+import kotlin.collections.ArrayDeque
 import kotlin.math.max
 
 class ConstraintInjector(
@@ -47,6 +47,8 @@ class ConstraintInjector(
     }
 
     fun addInitialSubtypeConstraint(c: Context, lowerType: KotlinTypeMarker, upperType: KotlinTypeMarker, position: ConstraintPosition) {
+        if (lowerType == upperType)
+            return
         val initialConstraint = InitialConstraint(lowerType, upperType, UPPER, position)
         c.addInitialConstraint(initialConstraint)
         updateAllowedTypeDepth(c, lowerType)
@@ -72,6 +74,39 @@ class ConstraintInjector(
         val possibleNewConstraints = Stack<Pair<TypeVariableMarker, Constraint>>()
         val typeCheckerContext = TypeCheckerContext(c, incorporatePosition, lowerType, upperType, possibleNewConstraints)
         typeCheckerContext.runIsSubtypeOf(lowerType, upperType)
+
+//        if (possibleNewConstraints.size > 1) {
+//            val foldedNewConstraints = ArrayList<Pair<TypeVariableMarker, Constraint>>()
+//            while (possibleNewConstraints.isNotEmpty()) {
+//                val constraint = possibleNewConstraints.pop()
+//                var folded = false
+//                for (i in foldedNewConstraints.indices) {
+//                    val recorded = foldedNewConstraints[i]
+//                    if (recorded.first == constraint.first && recorded.second.type == constraint.second
+//                            .type /* check if condition is sufficient */) {
+//                        folded = when {
+//                            recorded.second.kind == EQUALITY -> true
+//                            recorded.second.kind != constraint.second.kind -> {
+//                                foldedNewConstraints[i] =
+//                                    constraint.first to
+//                                            Constraint(
+//                                                EQUALITY, recorded.second.type, recorded.second.position, recorded.second.typeHashCode,
+//                                                recorded.second.derivedFrom, recorded.second.isNullabilityConstraint,
+//                                                recorded.second.inputTypePositionBeforeIncorporation
+//                                            )
+//                                true
+//                            }
+//                            else -> false
+//                        }
+//                        if (folded) break;
+//                    }
+//                }
+//                if (!folded) {
+//                    foldedNewConstraints.add(constraint)
+//                }
+//            }
+//            possibleNewConstraints.addAll(foldedNewConstraints.reversed())
+//        }
 
         while (possibleNewConstraints.isNotEmpty()) {
             val (typeVariable, constraint) = possibleNewConstraints.pop()
@@ -257,13 +292,15 @@ class ConstraintInjector(
                 }
             }
 
-            val newConstraint = Constraint(
-                kind, targetType, position,
-                derivedFrom = derivedFrom,
-                isNullabilityConstraint = isNullabilityConstraint,
-                inputTypePositionBeforeIncorporation = inputTypePosition
-            )
-            possibleNewConstraints.add(typeVariable to newConstraint)
+            if (possibleNewConstraints.none { it.first == typeVariable && it.second.type == targetType && it.second.kind == kind }) {
+                val newConstraint = Constraint(
+                    kind, targetType, position,
+                    derivedFrom = derivedFrom,
+                    isNullabilityConstraint = isNullabilityConstraint,
+                    inputTypePositionBeforeIncorporation = inputTypePosition
+                )
+                possibleNewConstraints.add(typeVariable to newConstraint)
+            }
         }
 
         override val allTypeVariablesWithConstraints: Collection<VariableWithConstraints>
