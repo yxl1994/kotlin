@@ -24,6 +24,8 @@ import org.jetbrains.kotlin.gradle.plugin.LanguageSettingsBuilder
 import org.jetbrains.kotlin.gradle.plugin.cocoapods.asValidFrameworkName
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import org.jetbrains.kotlin.gradle.plugin.sources.DefaultLanguageSettingsBuilder
+import org.jetbrains.kotlin.gradle.utils.getValue
+import org.jetbrains.kotlin.gradle.utils.klibModuleName
 import org.jetbrains.kotlin.konan.target.CompilerOutputKind
 import org.jetbrains.kotlin.konan.target.CompilerOutputKind.*
 import org.jetbrains.kotlin.konan.target.KonanTarget
@@ -295,6 +297,15 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
     override val baseName: String
         get() = if (compilation.isMainCompilation) project.name else "${project.name}_${compilation.name}"
 
+    @get:Input
+    val moduleName: String by project.provider {
+        if (compilation.isMainCompilation) {
+            project.klibModuleName
+        } else {
+            baseName
+        }
+    }
+
     // Inputs and outputs.
     // region Sources.
     @InputFiles
@@ -376,6 +387,8 @@ open class KotlinNativeCompile : AbstractKotlinNativeCompile<KotlinCommonOptions
     override fun buildCompilerArgs(): List<String> = mutableListOf<String>().apply {
         addAll(super.buildCompilerArgs())
 
+        // Configure FQ module name to avoid cyclic dependencies in klib manifests (see KT-36721).
+        addArg("-module-name", moduleName)
         val friends = friendModule?.files
         if (friends != null && friends.isNotEmpty()) {
             addArg("-friend-modules", friends.map { it.absolutePath }.joinToString(File.pathSeparator))
