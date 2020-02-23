@@ -364,7 +364,7 @@ class DeclarationStubGenerator(
     private fun findDescriptorForAccessorSignature(signature: IdSignature.AccessorSignature): DeclarationDescriptor? {
         val propertyDescriptor = findDescriptorBySignature(signature.propertySignature) as? PropertyDescriptor ?: return null
         return propertyDescriptor.accessors.singleOrNull {
-            symbolTable.signaturer.composeSignature(it) == signature
+            it.name == signature.accessorSignature.classFqn.shortName()
         }
     }
 
