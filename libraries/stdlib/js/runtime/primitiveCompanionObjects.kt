@@ -35,6 +35,8 @@ internal  object FloatCompanionObject {
     @Suppress("CONST_VAL_WITH_NON_CONST_INITIALIZER")
     const val MIN_VALUE: Float = 1.40129846E-45.toFloat()
 
+    // test
+
     @JsName("MAX_VALUE")
     const val MAX_VALUE: Float = 3.4028235E38F
 
