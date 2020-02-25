@@ -778,6 +778,7 @@
     <attachSourcesProvider implementation="org.jetbrains.kotlin.idea.actions.DecompileKotlinToJavaActionProvider"/>
 
     <referencesSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinReferencesSearcher"/>
+    <referencesSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinAliasedImportedElementSearcher"/>
     <directClassInheritorsSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinDirectInheritorsSearcher"/>
     <overridingMethodsSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinOverridingMethodsWithGenericsSearcher"/>
     <definitionsScopedSearch implementation="org.jetbrains.kotlin.idea.search.ideaExtensions.KotlinDefinitionsSearcher"/>

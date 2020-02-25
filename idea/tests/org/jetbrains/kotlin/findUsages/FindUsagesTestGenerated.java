@@ -351,6 +351,11 @@ public class FindUsagesTestGenerated extends AbstractFindUsagesTest {
                 runTest("idea/testData/findUsages/kotlin/findClassUsages/javaDerivedInterfaceUsages2.0.kt");
             }
 
+            @TestMetadata("kotlinAliasedClassAllUsages.0.kt")
+            public void testKotlinAliasedClassAllUsages() throws Exception {
+                runTest("idea/testData/findUsages/kotlin/findClassUsages/kotlinAliasedClassAllUsages.0.kt");
+            }
+
             @TestMetadata("kotlinClassAllUsages.0.kt")
             public void testKotlinClassAllUsages() throws Exception {
                 runTest("idea/testData/findUsages/kotlin/findClassUsages/kotlinClassAllUsages.0.kt");
@@ -612,6 +617,11 @@ public class FindUsagesTestGenerated extends AbstractFindUsagesTest {
             @TestMetadata("jvmStaticJvmOverloadsFun.0.kt")
             public void testJvmStaticJvmOverloadsFun() throws Exception {
                 runTest("idea/testData/findUsages/kotlin/findFunctionUsages/jvmStaticJvmOverloadsFun.0.kt");
+            }
+
+            @TestMetadata("kotlinAliasedMethodUsages.0.kt")
+            public void testKotlinAliasedMethodUsages() throws Exception {
+                runTest("idea/testData/findUsages/kotlin/findFunctionUsages/kotlinAliasedMethodUsages.0.kt");
             }
 
             @TestMetadata("kotlinInternalMethodUsages.0.kt")
@@ -1536,6 +1546,11 @@ public class FindUsagesTestGenerated extends AbstractFindUsagesTest {
 
             public void testAllFilesPresentInFindJavaClassUsages() throws Exception {
                 KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("idea/testData/findUsages/java/findJavaClassUsages"), Pattern.compile("^(.+)\\.0\\.java$"), null, true);
+            }
+
+            @TestMetadata("JKAliasedClassAllUsages.0.java")
+            public void testJKAliasedClassAllUsages() throws Exception {
+                runTest("idea/testData/findUsages/java/findJavaClassUsages/JKAliasedClassAllUsages.0.java");
             }
 
             @TestMetadata("JKClassAllUsages.0.java")
