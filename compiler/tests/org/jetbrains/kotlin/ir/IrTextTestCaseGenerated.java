@@ -55,6 +55,11 @@ public class IrTextTestCaseGenerated extends AbstractIrTextTestCase {
             runTest("compiler/testData/ir/irText/classes/argumentReorderingInDelegatingConstructorCall.kt");
         }
 
+        @TestMetadata("box.kt")
+        public void testBox() throws Exception {
+            runTest("compiler/testData/ir/irText/classes/box.kt");
+        }
+
         @TestMetadata("classMembers.kt")
         public void testClassMembers() throws Exception {
             runTest("compiler/testData/ir/irText/classes/classMembers.kt");

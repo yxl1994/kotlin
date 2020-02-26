@@ -56,6 +56,11 @@ public class Fir2IrTextTestGenerated extends AbstractFir2IrTextTest {
             runTest("compiler/testData/ir/irText/classes/argumentReorderingInDelegatingConstructorCall.kt");
         }
 
+        @TestMetadata("box.kt")
+        public void testBox() throws Exception {
+            runTest("compiler/testData/ir/irText/classes/box.kt");
+        }
+
         @TestMetadata("classMembers.kt")
         public void testClassMembers() throws Exception {
             runTest("compiler/testData/ir/irText/classes/classMembers.kt");
