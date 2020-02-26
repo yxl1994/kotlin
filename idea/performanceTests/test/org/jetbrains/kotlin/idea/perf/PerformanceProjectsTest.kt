@@ -227,7 +227,7 @@ class PerformanceProjectsTest : AbstractPerformanceProjectsTest() {
             name = "helloKotlin",
             stats = stats,
             note = note,
-            path = "idea/testData/perfTest/helloKotlin",
+            path = "/Users/dmitriy.dolovov/work/kt/kotlin/idea/testData/perfTest/helloKotlin",
             openAction = SIMPLE_JAVA_MODULE
         )
 

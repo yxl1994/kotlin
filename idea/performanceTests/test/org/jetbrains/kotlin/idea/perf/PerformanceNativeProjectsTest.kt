@@ -32,7 +32,7 @@ class PerformanceNativeProjectsTest : AbstractPerformanceProjectsTest() {
 
     companion object {
         private const val GRADLE_VERSION = "6.0.1"
-        private const val KOTLIN_PLUGIN_VERSION = "1.4.0-dev-3273" // TODO: use 1.4-M1 when it's published
+        private const val KOTLIN_PLUGIN_VERSION = "1.4.0-old-model" // TODO: use 1.4-M1 when it's published
         
         private var warmedUp: Boolean = false
     }
@@ -136,7 +136,7 @@ class PerformanceNativeProjectsTest : AbstractPerformanceProjectsTest() {
         enableCommonizer: Boolean,
         note: String = ""
     ): Project {
-        val templateRoot = File("idea/testData/perfTest/native/").resolve(templateName)
+        val templateRoot = File("/Users/dmitriy.dolovov/work/kt/kotlin/idea/testData/perfTest/native/").resolve(templateName)
         val projectRoot = FileUtil.createTempDirectory("project", "", false)
 
         templateRoot.walkTopDown()
