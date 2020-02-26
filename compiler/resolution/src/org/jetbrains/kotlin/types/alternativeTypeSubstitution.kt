@@ -8,7 +8,7 @@ package org.jetbrains.kotlin.types
 import org.jetbrains.kotlin.types.typeUtil.contains
 
 fun substituteAlternativesInPublicType(type: KotlinType): UnwrappedType {
-    if (!type.contains { it.getEnhancement() is AlternativePublicType })
+    if (!type.contains { it is TypeWithAlternative })
         return type.unwrap()
 
     return doReplace(type.unwrap())
@@ -17,9 +17,9 @@ fun substituteAlternativesInPublicType(type: KotlinType): UnwrappedType {
 private fun doReplace(type: UnwrappedType): UnwrappedType {
     if (type is ErrorType) return type
 
-    val enhancement = type.getEnhancement()
-    return if (enhancement is AlternativePublicType) {
-        doReplace(enhancement.unwrap())
+    val alternative = type.getAlternative()
+    return if (alternative != null) {
+        doReplace(alternative.unwrap())
     } else {
         when (val unwrappedType = type.unwrap()) {
             is SimpleType -> unwrappedType.updateArguments()
@@ -30,6 +30,7 @@ private fun doReplace(type: UnwrappedType): UnwrappedType {
         }
     }
 }
+
 private fun SimpleType.updateArguments(): SimpleType {
     return replace(arguments.map { replaceProjection(it) })
 }

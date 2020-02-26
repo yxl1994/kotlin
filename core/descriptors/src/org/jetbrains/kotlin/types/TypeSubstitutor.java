@@ -145,7 +145,8 @@ public class TypeSubstitutor implements TypeSubstitutorMarker {
             );
 
             KotlinType substitutedEnhancement = substitute(enhancement, originalProjection.getProjectionKind());
-            KotlinType resultingType = TypeWithEnhancementKt.wrapEnhancement(substitution.getType().unwrap(), substitutedEnhancement);
+            KotlinType resultingType =
+                    ((TypeWithEnhancement) type).wrapEnhancementIn(substitution.getType().unwrap(), substitutedEnhancement);
 
             return new TypeProjectionImpl(substitution.getProjectionKind(), resultingType);
         }

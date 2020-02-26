@@ -170,7 +170,7 @@ class JavaNullabilityChecker : AdditionalTypeChecker {
     private fun KotlinType.mayBeNull(): EnhancedNullabilityInfo? = when {
         !isError && !isFlexible() && TypeUtils.acceptsNullable(this) -> enhancementFromKotlin()
         isFlexible() && TypeUtils.acceptsNullable(asFlexibleType().lowerBound) -> enhancementFromKotlin()
-        this is TypeWithEnhancement && enhancement.mayBeNull() != null -> enhancementFromJava()
+        this is TypeWithJavaEnhancement && enhancement.mayBeNull() != null -> enhancementFromJava()
         else -> null
     }
 }
@@ -180,11 +180,11 @@ class EnhancedNullabilityInfo(val enhancedType: KotlinType, val isFromJava: Bool
 }
 
 private fun KotlinType.enhancementFromKotlin() = EnhancedNullabilityInfo(this, isFromJava = false)
-private fun TypeWithEnhancement.enhancementFromJava() = EnhancedNullabilityInfo(enhancement, isFromJava = true)
+private fun TypeWithJavaEnhancement.enhancementFromJava() = EnhancedNullabilityInfo(enhancement, isFromJava = true)
 
 fun KotlinType.mustNotBeNull(): EnhancedNullabilityInfo? = when {
     !isError && !isFlexible() && !TypeUtils.acceptsNullable(this) -> enhancementFromKotlin()
     isFlexible() && !TypeUtils.acceptsNullable(asFlexibleType().upperBound) -> enhancementFromKotlin()
-    this is TypeWithEnhancement && enhancement.mustNotBeNull() != null -> enhancementFromJava()
+    this is TypeWithJavaEnhancement && enhancement.mustNotBeNull() != null -> enhancementFromJava()
     else -> null
 }

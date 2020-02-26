@@ -95,6 +95,11 @@ public class ForeignAnnotationsNoAnnotationInClasspathWithPsiClassReadingTestGen
             KotlinTestUtils.assertAllTestsPresentByMetadataWithExcluded(this.getClass(), new File("compiler/testData/foreignAnnotations/tests/jsr305"), Pattern.compile("^(.+)\\.kt$"), null, true);
         }
 
+        @TestMetadata("noClashWithAlternativeTypes.kt")
+        public void testNoClashWithAlternativeTypes() throws Exception {
+            runTest("compiler/testData/foreignAnnotations/tests/jsr305/noClashWithAlternativeTypes.kt");
+        }
+
         @TestMetadata("nonNullNever.kt")
         public void testNonNullNever() throws Exception {
             runTest("compiler/testData/foreignAnnotations/tests/jsr305/nonNullNever.kt");

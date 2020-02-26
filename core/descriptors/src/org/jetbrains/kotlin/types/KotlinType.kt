@@ -194,7 +194,7 @@ abstract class SimpleType : UnwrappedType(), SimpleTypeMarker, TypeArgumentListM
 }
 
 // lowerBound is a subtype of upperBound
-abstract class FlexibleType(val lowerBound: SimpleType, val upperBound: SimpleType) :
+abstract class FlexibleType(open val lowerBound: SimpleType, open val upperBound: SimpleType) :
     UnwrappedType(), SubtypingRepresentatives, FlexibleTypeMarker {
 
     abstract val delegate: SimpleType
