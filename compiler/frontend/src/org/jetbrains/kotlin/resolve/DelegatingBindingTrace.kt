@@ -19,6 +19,7 @@ package org.jetbrains.kotlin.resolve
 import com.google.common.collect.ImmutableMap
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.diagnostics.Diagnostic
+import org.jetbrains.kotlin.diagnostics.DiagnosticSink
 import org.jetbrains.kotlin.psi.KtExpression
 import org.jetbrains.kotlin.resolve.diagnostics.Diagnostics
 import org.jetbrains.kotlin.resolve.diagnostics.MutableDiagnosticsWithSuppression
@@ -150,10 +151,18 @@ open class DelegatingBindingTrace(
     }
 
     override fun report(diagnostic: Diagnostic) {
+        diagnosticsCallback?.callback(diagnostic)
+
         if (mutableDiagnostics == null) {
             return
         }
         mutableDiagnostics.report(diagnostic)
+    }
+
+    protected var diagnosticsCallback: DiagnosticSink.DiagnosticsCallback? = null
+
+    override fun setCallback(callback: DiagnosticSink.DiagnosticsCallback?) {
+        diagnosticsCallback = callback
     }
 
     override fun wantsDiagnostics(): Boolean = mutableDiagnostics != null

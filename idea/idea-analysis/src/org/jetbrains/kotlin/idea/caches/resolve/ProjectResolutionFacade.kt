@@ -14,6 +14,7 @@ import org.jetbrains.kotlin.analyzer.*
 import org.jetbrains.kotlin.context.GlobalContextImpl
 import org.jetbrains.kotlin.context.withProject
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
+import org.jetbrains.kotlin.diagnostics.Diagnostic
 import org.jetbrains.kotlin.idea.caches.project.*
 import org.jetbrains.kotlin.idea.caches.project.IdeaModuleInfo
 import org.jetbrains.kotlin.idea.caches.trackers.KotlinCodeBlockModificationListener
@@ -115,7 +116,10 @@ internal class ProjectResolutionFacade(
         return cachedResolverForProject.descriptorForModule(ideaModuleInfo)
     }
 
-    internal fun getAnalysisResultsForElements(elements: Collection<KtElement>): AnalysisResult {
+    internal fun getAnalysisResultsForElements(
+        elements: Collection<KtElement>,
+        callback: (Diagnostic) -> Unit
+    ): AnalysisResult {
         assert(elements.isNotEmpty()) { "elements collection should not be empty" }
         val slruCache = synchronized(analysisResults) {
             analysisResults.value!!
@@ -124,7 +128,7 @@ internal class ProjectResolutionFacade(
             val perFileCache = synchronized(slruCache) {
                 slruCache[it.containingKtFile]
             }
-            perFileCache.getAnalysisResults(it)
+            perFileCache.getAnalysisResults(it, callback)
         }
         val withError = results.firstOrNull { it.isError() }
         val bindingContext = CompositeBindingContext.create(results.map { it.bindingContext })

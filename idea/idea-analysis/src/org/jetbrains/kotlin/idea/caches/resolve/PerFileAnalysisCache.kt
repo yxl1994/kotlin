@@ -51,7 +51,10 @@ internal class PerFileAnalysisCache(val file: KtFile, componentProvider: Compone
     private val cache = HashMap<PsiElement, AnalysisResult>()
     private var fileResult: AnalysisResult? = null
 
-    fun getAnalysisResults(element: KtElement): AnalysisResult {
+    fun getAnalysisResults(
+        element: KtElement,
+        callback: (Diagnostic) -> Unit
+    ): AnalysisResult {
         assert(element.containingKtFile == file) { "Wrong file. Expected $file, but was ${element.containingKtFile}" }
 
         val analyzableParent = KotlinResolveDataProvider.findAnalyzableParent(element)
@@ -60,7 +63,7 @@ internal class PerFileAnalysisCache(val file: KtFile, componentProvider: Compone
             ProgressIndicatorProvider.checkCanceled()
 
             // step 1: perform incremental analysis IF it is applicable
-            getIncrementalAnalysisResult()?.let { return it }
+            getIncrementalAnalysisResult(callback)?.let { return it }
 
             // cache does not contain AnalysisResult per each kt/psi element
             // instead it looks up analysis for its parents - see lookUp(analyzableElement)
@@ -71,14 +74,14 @@ internal class PerFileAnalysisCache(val file: KtFile, componentProvider: Compone
             }
 
             // step 3: perform analyze of analyzableParent as nothing has been cached yet
-            val result = analyze(analyzableParent)
+            val result = analyze(analyzableParent, null, callback)
             cache[analyzableParent] = result
 
             return@synchronized result
         }
     }
 
-    private fun getIncrementalAnalysisResult(): AnalysisResult? {
+    private fun getIncrementalAnalysisResult(callback: (Diagnostic) -> Unit): AnalysisResult? {
         // move fileResult from cache if it is stored there
         if (fileResult == null && cache.containsKey(file)) {
             fileResult = cache[file]
@@ -121,7 +124,7 @@ internal class PerFileAnalysisCache(val file: KtFile, componentProvider: Compone
                                 )
                             }
 
-                        val newResult = analyze(inBlockModification, trace)
+                        val newResult = analyze(inBlockModification, trace, callback)
                         analysisResult = wrapResult(result, newResult, trace)
                     }
                     file.clearInBlockModifications()
@@ -179,7 +182,7 @@ internal class PerFileAnalysisCache(val file: KtFile, componentProvider: Compone
         }
     }
 
-    private fun analyze(analyzableElement: KtElement, bindingTrace: BindingTrace? = null): AnalysisResult {
+    private fun analyze(analyzableElement: KtElement, bindingTrace: BindingTrace?, callback: (Diagnostic) -> Unit): AnalysisResult {
         ProgressIndicatorProvider.checkCanceled()
 
         val project = analyzableElement.project
@@ -196,7 +199,8 @@ internal class PerFileAnalysisCache(val file: KtFile, componentProvider: Compone
                 codeFragmentAnalyzer,
                 bodyResolveCache,
                 analyzableElement,
-                bindingTrace
+                bindingTrace,
+                callback
             )
         } catch (e: ProcessCanceledException) {
             throw e
@@ -366,12 +370,14 @@ private object KotlinResolveDataProvider {
         codeFragmentAnalyzer: CodeFragmentAnalyzer,
         bodyResolveCache: BodyResolveCache,
         analyzableElement: KtElement,
-        bindingTrace: BindingTrace?
+        bindingTrace: BindingTrace?,
+        callback: (Diagnostic) -> Unit
     ): AnalysisResult {
         try {
             if (analyzableElement is KtCodeFragment) {
                 val bodyResolveMode = BodyResolveMode.PARTIAL_FOR_COMPLETION
-                val bindingContext = codeFragmentAnalyzer.analyzeCodeFragment(analyzableElement, bodyResolveMode).bindingContext
+                val trace: BindingTrace = codeFragmentAnalyzer.analyzeCodeFragment(analyzableElement, bodyResolveMode)
+                val bindingContext = trace.bindingContext
                 return AnalysisResult.success(bindingContext, moduleDescriptor)
             }
 
@@ -380,6 +386,8 @@ private object KotlinResolveDataProvider {
                 "Trace for resolution of $analyzableElement",
                 allowSliceRewrite = true
             )
+
+            trace.setCallback { callback(it) }
 
             val moduleInfo = analyzableElement.containingKtFile.getModuleInfo()
 

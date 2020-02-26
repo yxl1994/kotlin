@@ -53,6 +53,12 @@ public interface DiagnosticSink {
         }
     };
 
+    interface DiagnosticsCallback {
+        void callback(Diagnostic diagnostic);
+    }
+
     void report(@NotNull Diagnostic diagnostic);
+    default void setCallback(DiagnosticsCallback callback) {
+    };
     boolean wantsDiagnostics();
 }

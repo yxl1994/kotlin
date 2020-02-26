@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.analyzer.AnalysisResult
 import org.jetbrains.kotlin.caches.resolve.KotlinCacheService
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
+import org.jetbrains.kotlin.diagnostics.Diagnostic
 import org.jetbrains.kotlin.idea.resolve.ResolutionFacade
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.*
@@ -155,8 +156,11 @@ inline fun <reified T> T.analyzeWithContent(): BindingContext where T : KtDeclar
  * @ref [org.jetbrains.kotlin.idea.caches.resolve.PerFileAnalysisCache]
  */
 fun KtFile.analyzeWithAllCompilerChecks(vararg extraFiles: KtFile): AnalysisResult =
+    this.analyzeWithAllCompilerChecks({}, *extraFiles)
+
+fun KtFile.analyzeWithAllCompilerChecks(callback: (Diagnostic) -> Unit, vararg extraFiles: KtFile): AnalysisResult =
     KotlinCacheService.getInstance(project).getResolutionFacade(listOf(this) + extraFiles.toList())
-        .analyzeWithAllCompilerChecks(listOf(this))
+        .analyzeWithAllCompilerChecks(listOf(this), callback)
 
 /**
  * This function is expected to produce the same result as compiler for the given element and its children (including diagnostics,
