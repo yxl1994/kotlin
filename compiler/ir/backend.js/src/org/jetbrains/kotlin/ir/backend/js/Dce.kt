@@ -377,8 +377,15 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
             for (declaration in ArrayList(klass.declarations)) {
                 // TODO this is a hack.
                 if (declaration is IrProperty) {
-                    declaration.getter?.let { if (it.overridesUsefulFunction()) it.enqueue() }
-                    declaration.setter?.let { if (it.overridesUsefulFunction()) it.enqueue() }
+                    fun foo(f: IrSimpleFunction?) {
+                        if (f == null) return
+                        val oud = f.findOverriddenUsefulDeclaration()
+                        if (oud != null) {
+                            f.enqueue(oud, "yet another hack")
+                        }
+                    }
+                    foo(declaration.getter)
+                    foo(declaration.setter)
                 }
             }
 
@@ -387,7 +394,7 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
             if (klass.superTypes.any { it.isSuspendFunctionTypeOrSubtype() }) {
                 ArrayList(klass.declarations).forEach {
                     if (it is IrSimpleFunction && it.name.asString().startsWith("invoke")) {
-                        it.enqueue()
+                        it.enqueue(klass, "hack for SuspendFunctionN::invoke")
                     }
                 }
             }
@@ -396,7 +403,7 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
             if (klass.symbol == context.ir.symbols.coroutineImpl) {
                 ArrayList(klass.declarations).forEach {
                     if (it is IrSimpleFunction && it.name.asString() == "doResume") {
-                        it.enqueue()
+                        it.enqueue(klass, "hack for CoroutineImpl::doResume")
                     }
                 }
             }
