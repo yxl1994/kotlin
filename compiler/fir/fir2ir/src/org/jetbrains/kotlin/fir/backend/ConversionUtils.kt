@@ -278,3 +278,8 @@ private fun FirTypeRef.collectCallableNamesFromThisAndSupertypes(
     }
     return result
 }
+
+internal tailrec fun FirCallableSymbol<*>.deepestOverriddenSymbol(): FirCallableSymbol<*> {
+    val overriddenSymbol = overriddenSymbol ?: return this
+    return overriddenSymbol.deepestOverriddenSymbol()
+}
