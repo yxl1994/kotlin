@@ -32,7 +32,7 @@ class PerformanceNativeProjectsTest : AbstractPerformanceProjectsTest() {
 
     companion object {
         private const val GRADLE_VERSION = "6.0.1"
-        private const val KOTLIN_PLUGIN_VERSION = "1.4.0-old-model" // TODO: use 1.4-M1 when it's published
+        private const val KOTLIN_PLUGIN_VERSION = "1.4.0-new-model" // TODO: use 1.4-M1 when it's published
         
         private var warmedUp: Boolean = false
     }

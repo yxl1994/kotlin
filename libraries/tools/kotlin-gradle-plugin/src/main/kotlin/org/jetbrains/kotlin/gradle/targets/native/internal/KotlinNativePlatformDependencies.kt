@@ -134,7 +134,7 @@ private class NativePlatformDependencyResolver(val project: Project, val kotlinV
                 is CommonizedPlatform -> {
                     /* commonized platform libs with actual declarations */
                     val commonizedLibsDir = commonizedLibsDirs.getValue(dependency.common)
-                    libsInPlatformDir(commonizedLibsDir, dependency.target)
+                    libsInCommonDir(commonizedLibsDir) + libsInPlatformDir(commonizedLibsDir, dependency.target)
                 }
             }
 

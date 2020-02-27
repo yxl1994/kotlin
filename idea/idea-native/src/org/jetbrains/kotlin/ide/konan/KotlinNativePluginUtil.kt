@@ -92,7 +92,8 @@ internal val VirtualFile.isKonanLibraryRoot: Boolean
             // this is a hacky way to determine whether this is a Kotlin/Native .klib or common .klib (common .klibs don't have ir)
             // TODO(dsavvinov): introduce more robust way to detect library platform
             val irFolder = componentFile.findChild(KLIB_IR_FOLDER_NAME)
-            if (irFolder == null || irFolder.children.isEmpty()) return false
+//            if (irFolder == null || irFolder.children.isEmpty()) return false
+            if (irFolder == null || irFolder.children.isEmpty()) {}
 
             val manifestProperties = try {
                 manifestFile.inputStream.use { Properties().apply { load(it) } }
