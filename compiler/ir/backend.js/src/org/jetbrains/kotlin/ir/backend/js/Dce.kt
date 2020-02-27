@@ -230,7 +230,7 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
 
                 // Special hack for `IntrinsicsJs.kt` support
                 if (declaration.superTypes.any { it.isSuspendFunctionTypeOrSubtype() }) {
-                    declaration.declarations.forEach {
+                    declaration.declarations.toList().forEach {
                         if (it is IrSimpleFunction && it.name.asString().startsWith("invoke")) {
                             it.enqueue("hack for SuspendFunctionN::invoke")
                         }
@@ -239,7 +239,7 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
 
                 // TODO find out how `doResume` gets removed
                 if (declaration.symbol == context.ir.symbols.coroutineImpl) {
-                    declaration.declarations.forEach {
+                    declaration.declarations.toList().forEach {
                         if (it is IrSimpleFunction && it.name.asString() == "doResume") {
                             it.enqueue("hack for CoroutineImpl::doResume")
                         }
