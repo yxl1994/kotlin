@@ -118,12 +118,11 @@ fun usefulDeclarations(roots: Iterable<IrDeclaration>, context: JsIrBackendConte
         altFromFqn: String? = null
     ) {
 
-//        /// TODO check
-//        if (this is IrProperty && !this.isExternal ||
-//            this in result
-//        ) {
-//            return
-//        }
+        /// TODO check
+        if (this is IrProperty && !this.isExternal //|| this in result
+        ) {
+            return
+        }
 
         /*
         r - add to result and queue
