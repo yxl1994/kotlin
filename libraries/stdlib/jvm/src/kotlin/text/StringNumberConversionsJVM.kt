@@ -9,6 +9,8 @@
 
 package kotlin.text
 
+import kotlin.internal.LowPriorityInOverloadResolution
+
 /**
  * Returns a string representation of this [Byte] value in the specified [radix].
  *
@@ -48,8 +50,17 @@ public actual inline fun Long.toString(radix: Int): String = java.lang.Long.toSt
 /**
  * Returns `true` if the contents of this string is equal to the word "true", ignoring case, and `false` otherwise.
  */
+@LowPriorityInOverloadResolution
 @kotlin.internal.InlineOnly
 public actual inline fun String.toBoolean(): Boolean = java.lang.Boolean.parseBoolean(this)
+
+
+/**
+ * Returns `true` if this string is not `null` and it's contents is equal to the word "true", ignoring case, and `false` otherwise.
+ */
+@JvmName("toBooleanNullable")
+@kotlin.internal.InlineOnly
+public actual inline fun String?.toBoolean(): Boolean = java.lang.Boolean.parseBoolean(this)
 
 /**
  * Parses the string as a signed [Byte] number and returns the result.
