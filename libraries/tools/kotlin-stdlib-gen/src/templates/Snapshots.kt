@@ -437,11 +437,12 @@ object Snapshots : TemplateGroupBase() {
     }
 
     val f_associateWith = fn("associateWith(valueSelector: (K) -> V)") {
-        include(Iterables, Sequences, CharSequences, ArraysOfObjects)
+        include(Iterables, Sequences, CharSequences, ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
     } builder {
         inline()
+        specialFor(ArraysOfPrimitives, ArraysOfUnsigned) { inlineOnly() }
         since("1.3")
-        specialFor(ArraysOfObjects) {
+        specialFor(ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned) {
             since("1.4")
             annotation("@ExperimentalStdlibApi")
         }
@@ -476,11 +477,12 @@ object Snapshots : TemplateGroupBase() {
     }
 
     val f_associateWithTo = fn("associateWithTo(destination: M, valueSelector: (K) -> V)") {
-        include(Iterables, Sequences, CharSequences, ArraysOfObjects)
+        include(Iterables, Sequences, CharSequences, ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
     } builder {
         inline()
+        specialFor(ArraysOfPrimitives, ArraysOfUnsigned) { inlineOnly() }
         since("1.3")
-        specialFor(ArraysOfObjects) {
+        specialFor(ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned) {
             since("1.4")
             annotation("@ExperimentalStdlibApi")
         }
