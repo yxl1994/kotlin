@@ -85,6 +85,7 @@ object ArrayOps : TemplateGroupBase() {
         include(ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
     } builder {
         since("1.1")
+        annotation("@kotlin.internal.LowPriorityInOverloadResolution")
         infix(true)
         doc {
             """
@@ -93,8 +94,8 @@ object ArrayOps : TemplateGroupBase() {
             """
         }
         returns("Boolean")
-        if (family == ArraysOfUnsigned) {
-            body { "return storage.contentEquals(other.storage)" }
+        body { "return this.contentEquals(other)" }
+        if (f == ArraysOfUnsigned) {
             return@builder
         }
         doc {
@@ -105,6 +106,37 @@ object ArrayOps : TemplateGroupBase() {
         }
         on(Platform.JVM) {
             inlineOnly()
+        }
+    }
+
+    val f_contentEquals_nullable = fn("contentEquals(other: SELF?)") {
+        include(ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
+    } builder {
+        since("1.4")
+        infix(true)
+        doc {
+            """
+            Returns `true` if the two specified arrays are *structurally* equal to one another,
+            i.e. contain the same number of the same elements in the same order.
+            """
+        }
+        receiver("SELF?")
+        returns("Boolean")
+        if (family == ArraysOfUnsigned) {
+            inlineOnly()
+            body { "return this?.storage.contentEquals(other?.storage)" }
+            return@builder
+        }
+
+        doc {
+            doc + """
+            The elements are compared for equality with the [equals][Any.equals] function.
+            For floating point numbers it means that `NaN` is equal to itself and `-0.0` is not equal to `0.0`.
+            """
+        }
+        on(Platform.JVM) {
+            inlineOnly()
+            annotation("""@JvmName("contentEqualsNullable")""")
             body { "return java.util.Arrays.equals(this, other)" }
         }
 
@@ -126,6 +158,7 @@ object ArrayOps : TemplateGroupBase() {
             body {
                 """
                 if (this === other) return true
+                if (this === null || other === null) return false
                 if (size != other.size) return false
                 for (i in indices) {
                     if (${notEq("this[i]", "other[i]")}) return false
@@ -185,6 +218,7 @@ object ArrayOps : TemplateGroupBase() {
         include(ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
     } builder {
         since("1.1")
+        annotation("@kotlin.internal.LowPriorityInOverloadResolution")
         doc {
             """
             Returns a string representation of the contents of the specified array as if it is [List].
@@ -192,12 +226,36 @@ object ArrayOps : TemplateGroupBase() {
         }
         sample("samples.collections.Arrays.ContentOperations.contentToString")
         returns("String")
-        if (family == ArraysOfUnsigned) {
-            body { """return joinToString(", ", "[", "]")""" }
+        body { "return this.contentToString()" }
+        if (f == ArraysOfUnsigned) {
             return@builder
         }
         on(Platform.JVM) {
             inlineOnly()
+        }
+    }
+
+    val f_contentToString_nullable = fn("contentToString()") {
+        include(ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
+    } builder {
+        since("1.4")
+        doc {
+            """
+            Returns a string representation of the contents of the specified array as if it is [List].
+            """
+        }
+        sample("samples.collections.Arrays.ContentOperations.contentToString")
+        receiver("SELF?")
+        returns("String")
+        if (family == ArraysOfUnsigned) {
+            inlineOnly()
+            body { """return this?.joinToString(", ", "[", "]") ?: "null"""" }
+            return@builder
+        }
+
+        on(Platform.JVM) {
+            inlineOnly()
+            annotation("""@JvmName("contentToStringNullable")""")
             body { "return java.util.Arrays.toString(this)" }
         }
         on(Platform.JS) {
@@ -206,11 +264,11 @@ object ArrayOps : TemplateGroupBase() {
                 body { "definedExternally" }
             }
             on(Backend.IR) {
-                body { """return joinToString(", ", "[", "]")""" }
+                body { """return this?.joinToString(", ", "[", "]") ?: "null"""" }
             }
         }
         on(Platform.Native) {
-            body { """return joinToString(", ", "[", "]")""" }
+            body { """return this?.joinToString(", ", "[", "]") ?: "null"""" }
         }
     }
 
@@ -259,16 +317,38 @@ object ArrayOps : TemplateGroupBase() {
         include(ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
     } builder {
         since("1.1")
+        annotation("@kotlin.internal.LowPriorityInOverloadResolution")
         doc {
             "Returns a hash code based on the contents of this array as if it is [List]."
         }
         returns("Int")
-        if (family == ArraysOfUnsigned) {
-            body { "return storage.contentHashCode()" }
+        body { "return this.contentHashCode()" }
+        if (f == ArraysOfUnsigned) {
             return@builder
         }
         on(Platform.JVM) {
             inlineOnly()
+        }
+    }
+
+    val f_contentHashCode_nullable = fn("contentHashCode()") {
+        include(ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
+    } builder {
+        since("1.4")
+        doc {
+            "Returns a hash code based on the contents of this array as if it is [List]."
+        }
+        receiver("SELF?")
+        returns("Int")
+        if (family == ArraysOfUnsigned) {
+            inlineOnly()
+            body { "return this?.storage.contentHashCode()" }
+            return@builder
+        }
+
+        on(Platform.JVM) {
+            inlineOnly()
+            annotation("""@JvmName("contentHashCodeNullable")""")
             body { "return java.util.Arrays.hashCode(this)" }
         }
         on(Platform.JS) {
@@ -283,6 +363,7 @@ object ArrayOps : TemplateGroupBase() {
         on(Platform.Native) {
             body {
                 """
+                if (this === null) return 0
                 var result = 1
                 for (element in this)
                     result = 31 * result + element.hashCode()
