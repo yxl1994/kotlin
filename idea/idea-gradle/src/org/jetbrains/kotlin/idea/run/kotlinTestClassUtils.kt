@@ -12,6 +12,7 @@ import org.jetbrains.kotlin.asJava.elements.KtLightElement
 import org.jetbrains.kotlin.idea.caches.lightClasses.KtFakeLightClass
 import org.jetbrains.kotlin.idea.caches.lightClasses.KtFakeLightMethod
 import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.psiUtil.getParentOfType
 
@@ -29,6 +30,6 @@ internal fun getTestClassForKotlinTest(location: Location<*>): PsiClass? {
         is KtLightElement<*, *> -> psi.kotlinOrigin
         else -> psi
     }
-    val owner = leaf?.getParentOfType<KtClassOrObject>(false) ?: return null
+    val owner = leaf?.getParentOfType<KtDeclaration>(false) as? KtClassOrObject ?: return null
     return KtFakeLightClass(owner)
 }
