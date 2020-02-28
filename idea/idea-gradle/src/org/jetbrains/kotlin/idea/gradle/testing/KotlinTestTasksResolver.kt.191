@@ -87,18 +87,21 @@ open class KotlinTestTasksResolver : AbstractProjectResolverExtension() {
             return
 
         try {
+            //for 191 idea we can't check running task so add listener always
             val addTestListenerScript = javaClass
                 .getResourceAsStream("/org/jetbrains/kotlin/idea/gradle/testing/addKotlinMppTestListener.groovy")
                 .bufferedReader()
                 .readText()
-            initScriptConsumer.consume(addTestListenerScript)
-
             val testLoggerScript = javaClass
                 .getResourceAsStream("/org/jetbrains/kotlin/idea/gradle/testing/KotlinMppTestLogger.groovy")
                 .bufferedReader()
                 .readText()
 
-            initScriptConsumer.consume(testLoggerScript)
+            initScriptConsumer.consume(buildString {
+                append(addTestListenerScript)
+                append('\n')
+                append(testLoggerScript)
+            })
         } catch (e: Exception) {
             LOG.error(e)
         }
