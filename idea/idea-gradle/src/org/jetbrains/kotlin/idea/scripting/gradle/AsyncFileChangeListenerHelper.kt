@@ -5,7 +5,7 @@
 
 package org.jetbrains.kotlin.idea.scripting.gradle
 
-import com.intellij.openapi.externalSystem.service.project.autoimport.AsyncFileChangeListenerBase
+import com.intellij.openapi.externalSystem.autoimport.AsyncFileChangeListenerBase
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
@@ -15,7 +15,7 @@ fun addVfsListener(watcher: GradleScriptInputsWatcher) {
     VirtualFileManager.getInstance().addAsyncFileListener(
         object : AsyncFileChangeListenerBase() {
 
-            private var files: Set<String> = Collections.emptySet()
+            private var files: Set<String> = Collections.emptySet();
 
             override fun isRelevant(path: String): Boolean {
                 return isInAffectedGradleProjectFiles(files, path)
@@ -26,9 +26,8 @@ fun addVfsListener(watcher: GradleScriptInputsWatcher) {
             }
 
             // do nothing
-            override fun prepareFileDeletion(file: VirtualFile) {}
             override fun apply() {}
-            override fun reset() {
+            override fun init() {
                 files = getAffectedGradleProjectFiles(watcher.project)
             }
 
