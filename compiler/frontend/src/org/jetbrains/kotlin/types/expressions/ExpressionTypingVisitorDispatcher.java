@@ -160,7 +160,7 @@ public abstract class ExpressionTypingVisitorDispatcher extends KtVisitor<Kotlin
 
     @NotNull
     private KotlinTypeInfo getTypeInfo(@NotNull KtExpression expression, ExpressionTypingContext context, KtVisitor<KotlinTypeInfo, ExpressionTypingContext> visitor) {
-        checkCancelled();
+        ProgressManager.checkCanceled();
         return typeInfoPerfCounter.time(() -> {
             try {
                 KotlinTypeInfo recordedTypeInfo = BindingContextUtils.getRecordedTypeInfo(expression, context.trace.getBindingContext());
@@ -230,10 +230,6 @@ public abstract class ExpressionTypingVisitorDispatcher extends KtVisitor<Kotlin
         });
     }
 
-    private void checkCancelled() {
-        ProgressManager.checkCanceled();
-    }
-
     private void recordTypeInfo(@NotNull KtExpression expression, @NotNull KotlinTypeInfo typeInfo) {
         LookupTracker lookupTracker = getComponents().lookupTracker;
         KotlinType resultType = typeInfo.getType();
@@ -262,14 +258,12 @@ public abstract class ExpressionTypingVisitorDispatcher extends KtVisitor<Kotlin
 
     @Override
     public KotlinTypeInfo visitLambdaExpression(@NotNull KtLambdaExpression expression, ExpressionTypingContext data) {
-        checkCancelled();
         // Erasing call position to unknown is necessary to prevent wrong call positions when type checking lambda's body
         return functions.visitLambdaExpression(expression, data.replaceCallPosition(CallPosition.Unknown.INSTANCE));
     }
 
     @Override
     public KotlinTypeInfo visitNamedFunction(@NotNull KtNamedFunction function, ExpressionTypingContext data) {
-        checkCancelled();
         return functions.visitNamedFunction(function, data);
     }
 
@@ -366,7 +360,6 @@ public abstract class ExpressionTypingVisitorDispatcher extends KtVisitor<Kotlin
 
     @Override
     public KotlinTypeInfo visitBlockExpression(@NotNull KtBlockExpression expression, ExpressionTypingContext data) {
-        checkCancelled();
         return basic.visitBlockExpression(expression, data);
     }
 
@@ -422,13 +415,11 @@ public abstract class ExpressionTypingVisitorDispatcher extends KtVisitor<Kotlin
 
     @Override
     public KotlinTypeInfo visitClass(@NotNull KtClass klass, ExpressionTypingContext data) {
-        checkCancelled();
         return basic.visitClass(klass, data);
     }
 
     @Override
     public KotlinTypeInfo visitProperty(@NotNull KtProperty property, ExpressionTypingContext data) {
-        checkCancelled();
         return basic.visitProperty(property, data);
     }
 
