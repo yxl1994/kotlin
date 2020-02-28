@@ -198,7 +198,8 @@ class ControlFlowGraphBuilder {
 
     fun exitAnonymousObject(anonymousObject: FirAnonymousObject): AnonymousObjectExitNode {
         return createAnonymousObjectExitNode(anonymousObject).also {
-            addNewSimpleNode(it)
+            // Hack for initializers of enum entries
+            addNewSimpleNodeIfPossible(it)
         }
     }
 
@@ -718,6 +719,11 @@ class ControlFlowGraphBuilder {
         addEdge(oldNode, newNode, isDead = isDead)
         lastNodes.push(newNode)
         return oldNode
+    }
+
+    private fun addNewSimpleNodeIfPossible(newNode: CFGNode<*>, isDead: Boolean = false): CFGNode<*>? {
+        if (lastNodes.isEmpty) return null
+        return addNewSimpleNode(newNode, isDead)
     }
 
     private fun addEdge(from: CFGNode<*>, to: CFGNode<*>, propagateDeadness: Boolean = true, isDead: Boolean = false) {
