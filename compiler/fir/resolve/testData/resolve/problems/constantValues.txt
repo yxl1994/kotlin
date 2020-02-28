@@ -62,14 +62,10 @@ FILE: constantValues.kt
                     public get(): R|ClassLiteralValue|
 
                 public final val classId: R|ClassId|
-                    public get(): R|ClassId| {
-                        ^ this@R|/KClassValue.Value.NormalClass|.R|/KClassValue.Value.NormalClass.value|.R|/ClassLiteralValue.classId|
-                    }
+                    public get(): R|ClassId|
 
                 public final val arrayDimensions: R|kotlin/Int|
-                    public get(): R|kotlin/Int| {
-                        ^ this@R|/KClassValue.Value.NormalClass|.R|/KClassValue.Value.NormalClass.value|.R|/ClassLiteralValue.arrayNestedness|
-                    }
+                    public get(): R|kotlin/Int|
 
                 public final fun component1(): R|ClassLiteralValue| {
                     ^component1 this@R|/KClassValue.Value.NormalClass|.R|/KClassValue.Value.NormalClass.value|
@@ -99,23 +95,15 @@ FILE: constantValues.kt
 
         }
 
-        public constructor(value: R|ClassLiteralValue|): R|KClassValue| {
-            this<R|KClassValue|>(Q|KClassValue.Value|.R|/KClassValue.Value.NormalClass.NormalClass|(R|<local>/value|))
-        }
-
-        public constructor(classId: R|ClassId|, arrayDimensions: R|kotlin/Int|): R|KClassValue| {
-            this<R|KClassValue|>(R|/ClassLiteralValue.ClassLiteralValue|(R|<local>/classId|, R|<local>/arrayDimensions|))
-        }
-
         public final fun getArgumentType(): R|KotlinType| {
             when (this@R|/KClassValue|.R|FakeOverride</KClassValue.value: R|KClassValue.Value|>|) {
                 ($subj$ is R|KClassValue.Value.LocalClass|) ->  {
-                    ^getArgumentType this@R|/KClassValue|.R|FakeOverride</KClassValue.value: R|KClassValue.Value|>|.<Unresolved name: type>#
+                    ^getArgumentType this@R|/KClassValue|.R|FakeOverride</KClassValue.value: R|KClassValue.Value|>|.R|/KClassValue.Value.LocalClass.type|
                 }
                 ($subj$ is R|KClassValue.Value.NormalClass|) ->  {
-                    lval <destruct>: <ERROR TYPE REF: Unresolved name: value> = this@R|/KClassValue|.R|FakeOverride</KClassValue.value: R|KClassValue.Value|>|.<Unresolved name: value>#
-                    lval classId: <ERROR TYPE REF: Unresolved name: component1> = R|<local>/<destruct>|.component1()
-                    lval arrayDimensions: <ERROR TYPE REF: Unresolved name: component2> = R|<local>/<destruct>|.component2()
+                    lval <destruct>: R|ClassLiteralValue| = this@R|/KClassValue|.R|FakeOverride</KClassValue.value: R|KClassValue.Value|>|.R|/KClassValue.Value.NormalClass.value|
+                    lval classId: R|ClassId| = R|<local>/<destruct>|.R|/ClassLiteralValue.component1|()
+                    lval arrayDimensions: R|kotlin/Int| = R|<local>/<destruct>|.R|/ClassLiteralValue.component2|()
                 }
             }
 

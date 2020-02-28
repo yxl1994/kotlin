@@ -8,22 +8,18 @@ class KotlinType
 class KClassValue(value: Value) : ConstantValue<KClassValue.Value>(value) {
     sealed class Value {
         data class NormalClass(val value: ClassLiteralValue) : Value() {
-            val classId: ClassId get() = value.classId
-            val arrayDimensions: Int get() = value.arrayNestedness
+            val classId: ClassId
+            val arrayDimensions: Int
         }
 
         data class LocalClass(val type: KotlinType) : Value()
     }
 
-    constructor(value: ClassLiteralValue) : this(Value.NormalClass(value))
-
-    constructor(classId: ClassId, arrayDimensions: Int) : this(ClassLiteralValue(classId, arrayDimensions))
-
     fun getArgumentType(): KotlinType {
         when (value) {
-            is Value.LocalClass -> return value.<!UNRESOLVED_REFERENCE!>type<!>
+            is Value.LocalClass -> return value.type
             is Value.NormalClass -> {
-                val (<!UNRESOLVED_REFERENCE!>classId<!>, <!UNRESOLVED_REFERENCE!>arrayDimensions<!>) = value.<!UNRESOLVED_REFERENCE!>value<!>
+                val (classId, arrayDimensions) = value.value
             }
         }
     }
