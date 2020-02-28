@@ -66,10 +66,10 @@ internal class ModuleResolutionFacadeImpl(
     }
 
     override fun analyzeWithAllCompilerChecks(elements: Collection<KtElement>): AnalysisResult {
-        return analyzeWithAllCompilerChecks(elements) {}
+        return analyzeWithAllCompilerChecks(elements, null)
     }
 
-    override fun analyzeWithAllCompilerChecks(elements: Collection<KtElement>, callback: (Diagnostic) -> Unit): AnalysisResult {
+    override fun analyzeWithAllCompilerChecks(elements: Collection<KtElement>, callback: ((Diagnostic) -> Unit)?): AnalysisResult {
         ResolveInDispatchThreadManager.assertNoResolveInDispatchThread()
 
         return runWithCancellationCheck {

@@ -53,7 +53,7 @@ internal class PerFileAnalysisCache(val file: KtFile, componentProvider: Compone
 
     fun getAnalysisResults(
         element: KtElement,
-        callback: (Diagnostic) -> Unit
+        callback: ((Diagnostic) -> Unit)?
     ): AnalysisResult {
         assert(element.containingKtFile == file) { "Wrong file. Expected $file, but was ${element.containingKtFile}" }
 
@@ -81,7 +81,7 @@ internal class PerFileAnalysisCache(val file: KtFile, componentProvider: Compone
         }
     }
 
-    private fun getIncrementalAnalysisResult(callback: (Diagnostic) -> Unit): AnalysisResult? {
+    private fun getIncrementalAnalysisResult(callback: ((Diagnostic) -> Unit)?): AnalysisResult? {
         // move fileResult from cache if it is stored there
         if (fileResult == null && cache.containsKey(file)) {
             fileResult = cache[file]
@@ -182,7 +182,7 @@ internal class PerFileAnalysisCache(val file: KtFile, componentProvider: Compone
         }
     }
 
-    private fun analyze(analyzableElement: KtElement, bindingTrace: BindingTrace?, callback: (Diagnostic) -> Unit): AnalysisResult {
+    private fun analyze(analyzableElement: KtElement, bindingTrace: BindingTrace?, callback: ((Diagnostic) -> Unit)?): AnalysisResult {
         ProgressIndicatorProvider.checkCanceled()
 
         val project = analyzableElement.project
@@ -371,7 +371,7 @@ private object KotlinResolveDataProvider {
         bodyResolveCache: BodyResolveCache,
         analyzableElement: KtElement,
         bindingTrace: BindingTrace?,
-        callback: (Diagnostic) -> Unit
+        callback: ((Diagnostic) -> Unit)?
     ): AnalysisResult {
         try {
             if (analyzableElement is KtCodeFragment) {
@@ -387,7 +387,9 @@ private object KotlinResolveDataProvider {
                 allowSliceRewrite = true
             )
 
-            trace.setCallback { callback(it) }
+            if (callback != null) {
+                trace.setCallback { callback(it) }
+            }
 
             val moduleInfo = analyzableElement.containingKtFile.getModuleInfo()
 

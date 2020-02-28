@@ -23,7 +23,7 @@ interface ResolutionFacade {
     fun analyze(elements: Collection<KtElement>, bodyResolveMode: BodyResolveMode): BindingContext
 
     fun analyzeWithAllCompilerChecks(elements: Collection<KtElement>): AnalysisResult
-    fun analyzeWithAllCompilerChecks(elements: Collection<KtElement>, callback: (Diagnostic) -> Unit): AnalysisResult
+    fun analyzeWithAllCompilerChecks(elements: Collection<KtElement>, callback: ((Diagnostic) -> Unit)?): AnalysisResult
 
     fun resolveToDescriptor(declaration: KtDeclaration, bodyResolveMode: BodyResolveMode = BodyResolveMode.FULL): DeclarationDescriptor
 

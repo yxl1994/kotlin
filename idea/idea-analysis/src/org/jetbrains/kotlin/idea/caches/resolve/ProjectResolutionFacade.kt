@@ -118,7 +118,7 @@ internal class ProjectResolutionFacade(
 
     internal fun getAnalysisResultsForElements(
         elements: Collection<KtElement>,
-        callback: (Diagnostic) -> Unit
+        callback: ((Diagnostic) -> Unit)?
     ): AnalysisResult {
         assert(elements.isNotEmpty()) { "elements collection should not be empty" }
         val slruCache = synchronized(analysisResults) {

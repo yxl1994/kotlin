@@ -57,7 +57,7 @@ private class ResolutionFacadeWithDebugInfo(
         }
     }
 
-    override fun analyzeWithAllCompilerChecks(elements: Collection<KtElement>, callback: (Diagnostic) -> Unit): AnalysisResult {
+    override fun analyzeWithAllCompilerChecks(elements: Collection<KtElement>, callback: ((Diagnostic) -> Unit)?): AnalysisResult {
         return wrapExceptions({ ResolvingWhat(elements) }) {
             delegate.analyzeWithAllCompilerChecks(elements, callback)
         }

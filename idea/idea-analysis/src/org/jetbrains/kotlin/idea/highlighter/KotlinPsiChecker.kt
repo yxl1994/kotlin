@@ -30,17 +30,22 @@ import com.intellij.psi.MultiRangeReference
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.util.containers.MultiMap
+import org.jetbrains.kotlin.asJava.getJvmSignatureDiagnostics
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.diagnostics.Diagnostic
 import org.jetbrains.kotlin.diagnostics.DiagnosticFactory
 import org.jetbrains.kotlin.diagnostics.Errors
 import org.jetbrains.kotlin.diagnostics.Severity
+import org.jetbrains.kotlin.idea.caches.project.getModuleInfo
 import org.jetbrains.kotlin.idea.caches.resolve.analyzeWithAllCompilerChecks
+import org.jetbrains.kotlin.idea.caches.resolve.analyzeWithContent
 import org.jetbrains.kotlin.idea.fir.FirResolution
 import org.jetbrains.kotlin.idea.fir.firResolveState
 import org.jetbrains.kotlin.idea.fir.getOrBuildFirWithDiagnostics
+import org.jetbrains.kotlin.idea.project.TargetPlatformDetector
 import org.jetbrains.kotlin.idea.quickfix.QuickFixes
 import org.jetbrains.kotlin.idea.references.mainReference
+import org.jetbrains.kotlin.platform.jvm.isJvm
 import org.jetbrains.kotlin.psi.*
 import org.jetbrains.kotlin.resolve.BindingContext
 import org.jetbrains.kotlin.resolve.diagnostics.Diagnostics
@@ -58,25 +63,55 @@ open class KotlinPsiChecker : Annotator, HighlightRangeExtension {
         if (FirResolution.enabled) {
             annotateElementUsingFrontendIR(element, file, holder)
         } else {
-            annotateElement(element, file, holder)
+            if (element != file) return
+            annotateFile(file, holder)
         }
     }
 
-    private fun annotateElement(
-        element: PsiElement,
-        containingFile: KtFile,
+    private fun annotateFile(
+        file: KtFile,
         holder: AnnotationHolder
     ) {
-        val analysisResult = containingFile.analyzeWithAllCompilerChecks()
+        // println("Just started: " + (System.currentTimeMillis())) //todo: remove me
+        val f = holder::class.java.getDeclaredMethod("queueToUpdateIncrementally")
+        f.isAccessible = true
+
+        val analysisResult = file.analyzeWithAllCompilerChecks(
+            { diagnostic ->
+                annotateElement(diagnostic.psiElement, holder, setOf(diagnostic), true)
+                // println("Diagnostic: " + (System.currentTimeMillis())) //todo: remove me
+                f.invoke(holder)
+            })
         if (analysisResult.isError()) {
             throw ProcessCanceledException(analysisResult.error)
         }
 
         val bindingContext = analysisResult.bindingContext
+        val diagnostics = bindingContext.diagnostics
+        val afterAnalysisVisitor = getAfterAnalysisVisitor(holder, bindingContext)
 
-        getAfterAnalysisVisitor(holder, bindingContext).forEach { visitor -> element.accept(visitor) }
+        val visitor = object : KtTreeVisitorVoid() {
+            override fun visitKtElement(element: KtElement) {
+                afterAnalysisVisitor.forEach { visitor -> element.accept(visitor) }
+                annotateElement(element, holder, diagnostics)
+                super.visitKtElement(element)
+            }
+        }
 
-        annotateElement(element, holder, bindingContext.diagnostics)
+        visitor.visitKtFile(file)
+
+        if (TargetPlatformDetector.getPlatform(file).isJvm()) {
+            val otherDiagnostics = when (file) {
+                //is KtDeclaration -> element.analyzeWithContent() //todo:
+                is KtFile -> file.analyzeWithContent()
+                else -> throw AssertionError("DuplicateJvmSignatureAnnotator: should not get here! Element: ${file.text}")
+            }.diagnostics
+
+            val moduleScope = file.getModuleInfo().contentScope()
+            val diagnostics = getJvmSignatureDiagnostics(file, otherDiagnostics, moduleScope) ?: return
+
+            KotlinPsiChecker().annotateElement(file, holder, diagnostics)
+        }
     }
 
     private fun annotateElementUsingFrontendIR(
@@ -94,7 +129,7 @@ open class KotlinPsiChecker : Annotator, HighlightRangeExtension {
         if (KotlinHighlightingUtil.shouldHighlightErrors(element)) {
             ElementAnnotator(element, holder) { param ->
                 shouldSuppressUnusedParameter(param)
-            }.registerDiagnosticsAnnotations(diagnostics)
+            }.registerDiagnosticsAnnotations(diagnostics, false)
         }
     }
 
@@ -105,19 +140,21 @@ open class KotlinPsiChecker : Annotator, HighlightRangeExtension {
     protected open fun shouldSuppressUnusedParameter(parameter: KtParameter): Boolean = false
 
     fun annotateElement(element: PsiElement, holder: AnnotationHolder, diagnostics: Diagnostics) {
-        val diagnosticsForElement = diagnostics.forElement(element).toSet()
+        annotateElement(element, holder, diagnostics.forElement(element).toSet(), false)
+    }
+
+    fun annotateElement(element: PsiElement, holder: AnnotationHolder, diagnosticsForElement: Set<Diagnostic>, noFixes: Boolean) {
+        if (diagnosticsForElement.isEmpty()) return
 
         if (element is KtNameReferenceExpression) {
-            val unresolved = diagnostics.any { it.factory == Errors.UNRESOLVED_REFERENCE }
+            val unresolved = diagnosticsForElement.any { it.factory == Errors.UNRESOLVED_REFERENCE }
             element.putUserData(UNRESOLVED_KEY, if (unresolved) Unit else null)
         }
-
-        if (diagnosticsForElement.isEmpty()) return
 
         if (KotlinHighlightingUtil.shouldHighlightErrors(element)) {
             ElementAnnotator(element, holder) { param ->
                 shouldSuppressUnusedParameter(param)
-            }.registerDiagnosticsAnnotations(diagnosticsForElement)
+            }.registerDiagnosticsAnnotations(diagnosticsForElement, noFixes)
         }
     }
 
@@ -223,11 +260,11 @@ private class ElementAnnotator(
     private val holder: AnnotationHolder,
     private val shouldSuppressUnusedParameter: (KtParameter) -> Boolean
 ) {
-    fun registerDiagnosticsAnnotations(diagnostics: Collection<Diagnostic>) {
-        diagnostics.groupBy { it.factory }.forEach { group -> registerDiagnosticAnnotations(group.value) }
+    fun registerDiagnosticsAnnotations(diagnostics: Collection<Diagnostic>, noFixes: Boolean) {
+        diagnostics.groupBy { it.factory }.forEach { group -> registerDiagnosticAnnotations(group.value, noFixes) }
     }
 
-    private fun registerDiagnosticAnnotations(diagnostics: List<Diagnostic>) {
+    private fun registerDiagnosticAnnotations(diagnostics: List<Diagnostic>, noFixes: Boolean) {
         assert(diagnostics.isNotEmpty())
 
         val validDiagnostics = diagnostics.filter { it.isValid }
@@ -297,19 +334,24 @@ private class ElementAnnotator(
             Severity.INFO -> AnnotationPresentationInfo(ranges, highlightType = ProblemHighlightType.INFORMATION)
         }
 
-        setUpAnnotations(diagnostics, presentationInfo)
+        setUpAnnotations(diagnostics, presentationInfo, noFixes)
     }
 
-    private fun setUpAnnotations(diagnostics: List<Diagnostic>, data: AnnotationPresentationInfo) {
-        val fixesMap = try {
-            createQuickFixes(diagnostics)
-        } catch (e: Exception) {
-            if (e is ControlFlowException) {
-                throw e
+    private fun setUpAnnotations(diagnostics: List<Diagnostic>, data: AnnotationPresentationInfo, noFixes: Boolean) {
+        val fixesMap =
+            if (noFixes) {
+                MultiMap<Diagnostic, IntentionAction>()
+            } else {
+                try {
+                    createQuickFixes(diagnostics)
+                } catch (e: Exception) {
+                    if (e is ControlFlowException) {
+                        throw e
+                    }
+                    LOG.error(e)
+                    MultiMap<Diagnostic, IntentionAction>()
+                }
             }
-            LOG.error(e)
-            MultiMap<Diagnostic, IntentionAction>()
-        }
 
         data.processDiagnostics(holder, diagnostics, fixesMap)
     }
