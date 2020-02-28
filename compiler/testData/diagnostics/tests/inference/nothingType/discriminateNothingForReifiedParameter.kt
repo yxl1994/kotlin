@@ -29,7 +29,7 @@ fun test4(): Bound = <!DEBUG_INFO_EXPRESSION_TYPE("Bound")!>takeReifiedUnbound(n
 
 fun test5(): Bound? = select(
     null,
-    <!IMPLICIT_NOTHING_TYPE_ARGUMENT_IN_RETURN_POSITION!>materialize<!>()
+    materialize()
 )
 
 fun test6() {

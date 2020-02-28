@@ -33,7 +33,6 @@ class VariableFixationFinder(
     interface Context : TypeSystemInferenceExtensionContext {
         val notFixedTypeVariables: Map<TypeConstructorMarker, VariableWithConstraints>
         val postponedTypeVariables: List<TypeVariableMarker>
-        fun isReified(variable: TypeVariableMarker): Boolean
     }
 
     data class VariableForFixation(
@@ -56,8 +55,9 @@ class VariableFixationFinder(
         WITH_COMPLEX_DEPENDENCY, // if type variable T has constraint with non fixed type variable inside (non-top-level): T <: Foo<S>
         WITH_TRIVIAL_OR_NON_PROPER_CONSTRAINTS, // proper trivial constraint from arguments, Nothing <: T
         RELATED_TO_ANY_OUTPUT_TYPE,
-        READY_FOR_FIXATION,
-        READY_FOR_FIXATION_REIFIED,
+        ALL_LOWER_NOTHING,
+        ALL_UPPER_CONSTRAINTS,
+        READY_FOR_FIXATION
     }
 
     private fun Context.getTypeVariableReadiness(
@@ -70,7 +70,8 @@ class VariableFixationFinder(
         hasDependencyToOtherTypeVariables(variable) -> TypeVariableFixationReadiness.WITH_COMPLEX_DEPENDENCY
         variableHasTrivialOrNonProperConstraints(variable) -> TypeVariableFixationReadiness.WITH_TRIVIAL_OR_NON_PROPER_CONSTRAINTS
         dependencyProvider.isVariableRelatedToAnyOutputType(variable) -> TypeVariableFixationReadiness.RELATED_TO_ANY_OUTPUT_TYPE
-        isReified(variable) -> TypeVariableFixationReadiness.READY_FOR_FIXATION_REIFIED
+        hasNoProperLowerConstraints(variable) -> TypeVariableFixationReadiness.ALL_UPPER_CONSTRAINTS
+        !hasProperLowerNonNothingConstraint(variable) -> TypeVariableFixationReadiness.ALL_LOWER_NOTHING
         else -> TypeVariableFixationReadiness.READY_FOR_FIXATION
     }
 
@@ -138,6 +139,13 @@ class VariableFixationFinder(
     private fun Context.isProperType(type: KotlinTypeMarker): Boolean =
         !type.contains { notFixedTypeVariables.containsKey(it.typeConstructor()) }
 
-    private fun Context.isReified(variable: TypeConstructorMarker): Boolean =
-        notFixedTypeVariables[variable]?.typeVariable?.let { isReified(it) } ?: false
+    private fun Context.hasNoProperLowerConstraints(variable: TypeConstructorMarker): Boolean =
+        notFixedTypeVariables[variable]?.constraints?.none {
+            isProperArgumentConstraint(it) && it.kind.isLower()
+        } ?: true
+
+    private fun Context.hasProperLowerNonNothingConstraint(variable: TypeConstructorMarker): Boolean =
+        notFixedTypeVariables[variable]?.constraints?.any {
+            it.kind.isLower() && isProperArgumentConstraint(it) && trivialConstraintTypeInferenceOracle.isSuitableResultedType(it.type)
+        } ?: false
 }

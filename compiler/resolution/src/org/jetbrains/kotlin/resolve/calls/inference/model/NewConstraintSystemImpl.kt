@@ -345,7 +345,7 @@ class NewConstraintSystemImpl(
         return storage.buildNotFixedVariablesToNonSubtypableTypesSubstitutor(this)
     }
 
-    // ResultTypeResolver.Context, VariableFixationFinder.Context
+    // ResultTypeResolver.Context
     override fun isReified(variable: TypeVariableMarker): Boolean {
         if (variable !is TypeVariableFromCallableDescriptor) return false
         return variable.originalTypeParameter.isReified
