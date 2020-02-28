@@ -1294,6 +1294,11 @@ public class FirDiagnosticsWithLightTreeTestGenerated extends AbstractFirDiagnos
             runTest("compiler/fir/resolve/testData/resolve/problems/callableReferencesAndDefaultParameters.kt");
         }
 
+        @TestMetadata("constantValues.kt")
+        public void testConstantValues() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/problems/constantValues.kt");
+        }
+
         @TestMetadata("definetelyNotNullForTypeParameter.kt")
         public void testDefinetelyNotNullForTypeParameter() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/problems/definetelyNotNullForTypeParameter.kt");
