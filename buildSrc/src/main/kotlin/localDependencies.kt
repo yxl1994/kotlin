@@ -29,7 +29,6 @@ import java.io.File
 
 private fun Project.kotlinBuildLocalDependenciesDir(): File =
     (findProperty("kotlin.build.dependencies.dir") as String?)?.let(::File)
-        ?: (findProperty("agent.persistent.cache") as String?)?.let(::File)
         ?: rootProject.gradle.gradleUserHomeDir.resolve("kotlin-build-dependencies")
 
 private fun Project.kotlinBuildLocalRepoDir(): File = kotlinBuildLocalDependenciesDir().resolve("repo")
