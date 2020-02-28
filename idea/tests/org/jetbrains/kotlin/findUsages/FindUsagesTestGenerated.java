@@ -436,6 +436,11 @@ public class FindUsagesTestGenerated extends AbstractFindUsagesTest {
                 runTest("idea/testData/findUsages/kotlin/findClassUsages/kotlinClassFunctionUsages2.0.kt");
             }
 
+            @TestMetadata("kotlinClassImportAliasAllUsages.0.kt")
+            public void testKotlinClassImportAliasAllUsages() throws Exception {
+                runTest("idea/testData/findUsages/kotlin/findClassUsages/kotlinClassImportAliasAllUsages.0.kt");
+            }
+
             @TestMetadata("kotlinClassNonConstructorUsages.0.kt")
             public void testKotlinClassNonConstructorUsages() throws Exception {
                 runTest("idea/testData/findUsages/kotlin/findClassUsages/kotlinClassNonConstructorUsages.0.kt");

@@ -19,6 +19,7 @@ package org.jetbrains.kotlin.idea.findUsages
 import com.intellij.CommonBundle
 import com.intellij.find.FindBundle
 import com.intellij.find.findUsages.FindUsagesHandler
+import com.intellij.find.findUsages.FindUsagesHandler.NULL_HANDLER
 import com.intellij.find.findUsages.FindUsagesHandlerFactory
 import com.intellij.find.findUsages.FindUsagesOptions
 import com.intellij.find.findUsages.JavaFindUsagesHandlerFactory
@@ -34,7 +35,9 @@ import org.jetbrains.kotlin.idea.findUsages.handlers.KotlinFindClassUsagesHandle
 import org.jetbrains.kotlin.idea.findUsages.handlers.KotlinFindMemberUsagesHandler
 import org.jetbrains.kotlin.idea.findUsages.handlers.KotlinTypeParameterFindUsagesHandler
 import org.jetbrains.kotlin.idea.refactoring.checkSuperMethods
+import org.jetbrains.kotlin.idea.references.mainReference
 import org.jetbrains.kotlin.psi.*
+import org.jetbrains.kotlin.psi.psiUtil.getQualifiedElementSelector
 import org.jetbrains.kotlin.psi.psiUtil.parameterIndex
 
 class KotlinFindUsagesHandlerFactory(project: Project) : FindUsagesHandlerFactory() {
@@ -51,10 +54,18 @@ class KotlinFindUsagesHandlerFactory(project: Project) : FindUsagesHandlerFactor
                 element is KtProperty ||
                 element is KtParameter ||
                 element is KtTypeParameter ||
+                element is KtImportAlias ||
                 element is KtConstructor<*>
 
     override fun createFindUsagesHandler(element: PsiElement, forHighlightUsages: Boolean): FindUsagesHandler {
         when (element) {
+            is KtImportAlias -> {
+                val ktClassOrObject =
+                    element.importDirective?.importedReference?.getQualifiedElementSelector()?.mainReference?.resolve() as? KtClassOrObject
+                        ?: return NULL_HANDLER
+                return KotlinFindClassUsagesHandler(ktClassOrObject, this)
+            }
+
             is KtClassOrObject ->
                 return KotlinFindClassUsagesHandler(element, this)
 
